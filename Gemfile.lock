@@ -53,6 +53,7 @@ GEM
     coderay (1.1.1)
     concurrent-ruby (1.0.5)
     database_cleaner (1.6.0)
+    deep_merge (1.1.1)
     devise (4.2.0)
       bcrypt (~> 3.0)
       orm_adapter (~> 0.1)
@@ -183,6 +184,7 @@ PLATFORMS
 
 DEPENDENCIES
   database_cleaner (= 1.6.0)
+  deep_merge (= 1.1.1)
   deep_unrest!
   devise_token_auth (= 0.1.40)
   dragonfly (= 1.1.2)
