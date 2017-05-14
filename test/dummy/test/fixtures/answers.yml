@@ -4,8 +4,10 @@ one:
   applicant: confirmed_email_applicant
   value: '<%= Faker::TwinPeaks.character %>'
   question: one
+  survey: one
 
 two:
   applicant: confirmed_email_applicant
   value: '<%= Faker::TwinPeaks.character %>'
   question: two
+  survey: one

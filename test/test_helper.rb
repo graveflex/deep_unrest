@@ -47,11 +47,18 @@ module ActiveSupport
       }
     end
 
+    # format a JSONAPI request by an authenticated user.
+    # a new confirmed user is created and used unless one is provided
+    def auth_xhr_req(params = {}, user = nil)
+      user = create_authed_user unless user
+      xhr_req(params, user.create_new_auth_token)
+    end
+
     # format a multipart/form-data request by an authenticated user.
     # a new confirmed user is created and used unless one is provided
-    def auth_multipart_req(params, applicant = nil)
-      applicant = create_authed_applicant unless applicant
-      multipart_req(params, applicant.create_new_auth_token)
+    def auth_multipart_req(params, user = nil)
+      user = create_authed_user unless user
+      multipart_req(params, user.create_new_auth_token)
     end
   end
 end

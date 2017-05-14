@@ -2,6 +2,14 @@
 
 require 'test_helper'
 
+def match_to_h(m)
+  Hash[m.names.map(&:to_sym).zip(m.captures)]
+end
+
+def scan_to_h(m)
+  m.map { |(type, id)| { type: type, id: id } }
+end
+
 module DeepUnrest
   class Test < ActiveSupport::TestCase
     test 'truth' do
@@ -10,31 +18,57 @@ module DeepUnrest
 
     class ParsePath < ActiveSupport::TestCase
       test 'parses path for entities and ids' do
-        assert_equal [['surveys', nil]],
-                     DeepUnrest.parse_path('surveys')
-        assert_equal [['surveys', '.123']],
-                     DeepUnrest.parse_path('surveys.123')
-        assert_equal [['surveys', '[123]']],
-                     DeepUnrest.parse_path('surveys[123]')
-        assert_equal [['surveys', '.1'],
-                      ['questions', nil]],
-                     DeepUnrest.parse_path('surveys.1.questions')
-        assert_equal [['surveys', '.1'],
-                      ['questions', '.2'],
-                      ['answers', '[1]']],
-                     DeepUnrest.parse_path(
-                       'surveys.1.questions.2.answers[1]'
-                     )
-        assert_equal [['surveys', '[1]'],
-                      ['questions', '[2]'],
-                      ['answers', '[1]']],
-                     DeepUnrest.parse_path(
-                       'surveys[1].questions[2].answers[1]'
-                     )
-        assert_equal [['surveys', nil],
-                      ['questions', nil],
-                      ['answers', nil]],
-                     DeepUnrest.parse_path('surveys.questions.answers')
+        match1 = DeepUnrest.parse_path('surveys.*')
+        match2 = DeepUnrest.parse_path('surveys.123')
+        match3 = DeepUnrest.parse_path('surveys[123]')
+        match4 = DeepUnrest.parse_path('surveys[1].questions.*')
+        match5 = DeepUnrest.parse_path('surveys.1.questions.2.answers[1]')
+        match6 = DeepUnrest.parse_path('surveys.*.questions.*.answers.*')
+
+        assert_equal scan_to_h(match1), [{ type: 'surveys',
+                                           id: '.*' }]
+        assert_equal scan_to_h(match2), [{ type: 'surveys',
+                                           id: '.123' }]
+        assert_equal scan_to_h(match3), [{ type: 'surveys',
+                                           id: '[123]' }]
+        assert_equal scan_to_h(match4), [{ type: 'surveys',
+                                           id: '[1]' },
+                                         { type: 'questions',
+                                           id: '.*' }]
+        assert_equal scan_to_h(match5), [{ type: 'surveys',
+                                           id: '.1' },
+                                         { type: 'questions',
+                                           id: '.2' },
+                                         { type: 'answers',
+                                           id: '[1]' }]
+        assert_equal scan_to_h(match6), [{ type: 'surveys',
+                                           id: '.*' },
+                                         { type: 'questions',
+                                           id: '.*' },
+                                         { type: 'answers',
+                                           id: '.*' }]
+      end
+
+      test 'throws errors when path is invalid' do
+        assert_raises DeepUnrest::InvalidPath do
+          DeepUnrest.parse_path('answers.questions.2')
+        end
+      end
+    end
+
+    class ParseErrorInfo < ActiveSupport::TestCase
+      # TODO: test for top level resource errors (non-field related)
+      test 'parses error key to correlate with operation path' do
+        match1 = DeepUnrest.parse_error_path('surveys[0].name')
+        match2 = DeepUnrest.parse_error_path('surveys[1].questions[2].baz')
+        match3 = DeepUnrest.parse_error_path('surveys[1].qs[2].answers[1].val')
+
+        assert_equal({ type: 'surveys', idx: '0', field: 'name' },
+                     match_to_h(match1))
+        assert_equal({ type: 'questions', idx: '2', field: 'baz' },
+                     match_to_h(match2))
+        assert_equal({ type: 'answers', idx: '1', field: 'val' },
+                     match_to_h(match3))
       end
     end
 
@@ -42,31 +76,27 @@ module DeepUnrest
       test 'derives scope type from id' do
         assert_equal :show, DeepUnrest.get_scope_type('.0')
         assert_equal :show, DeepUnrest.get_scope_type('.123')
+        assert_equal :show, DeepUnrest.get_scope_type('.abcdef')
         assert_equal :create, DeepUnrest.get_scope_type('[0]')
         assert_equal :create, DeepUnrest.get_scope_type('[123]')
-        assert_equal :related, DeepUnrest.get_scope_type(nil, 1)
-        assert_equal :all, DeepUnrest.get_scope_type(nil, 0)
-      end
+        assert_equal :update_all, DeepUnrest.get_scope_type('.*')
 
-      test 'raises error if parent does not have child association' do
-        question = questions(:one)
-        assert_raises DeepUnrest::InvalidAssociation do
-          DeepUnrest.get_scope(:related,
-                               [{ type: 'questions',
-                                  klass: Question,
-                                  scope: question }],
-                               'attachments')
+        assert_raises DeepUnrest::InvalidId do
+          DeepUnrest.get_scope_type('dingus')
         end
       end
 
-      test 'raises error if parent and child are both collections' do
-        question = questions(:one)
+      test 'throws errors for invalid associations' do
+        survey = surveys(:one)
+        survey_path = "surveys.#{survey.id}"
+        q1 = questions(:one)
+        q1_path = "questions.#{q1.id}"
+
         assert_raises DeepUnrest::InvalidAssociation do
-          DeepUnrest.get_scope(:related,
-                               [{ type: 'questions',
-                                  klass: Question,
-                                  scope: question }],
-                               'answers')
+          params = [{ action: 'update',
+                      path: "#{survey_path}.#{q1_path}.attachments[2]",
+                      attributes: { description: 'option 1' } }]
+          DeepUnrest.collect_all_scopes(params)
         end
       end
 
@@ -81,7 +111,7 @@ module DeepUnrest
         survey = surveys(:one)
         expected = { base: survey, method: :questions }
         assert_equal expected,
-                     DeepUnrest.get_scope(:related,
+                     DeepUnrest.get_scope(:update_all,
                                           [{ type: 'surveys',
                                              klass: Survey,
                                              scope: survey,
@@ -126,6 +156,8 @@ module DeepUnrest
                       action: :update,
                       scope_type: :update,
                       klass: Survey,
+                      path: survey_path,
+                      index: 0,
                       scope: { base: Survey,
                                method: :find,
                                arguments: [survey.id.to_s] } },
@@ -149,6 +181,8 @@ module DeepUnrest
                       id: ".#{a1.id}",
                       action: :update,
                       scope_type: :update,
+                      path: "#{survey_path}.#{q1_path}.#{a1_path}",
+                      index: 0,
                       klass: Answer,
                       scope: { base: Answer,
                                method: :find,
@@ -157,6 +191,8 @@ module DeepUnrest
                       id: '[1]',
                       action: :create,
                       scope_type: :create,
+                      path: "#{survey_path}.#{q1_path}.answers[1]",
+                      index: 1,
                       klass: Answer,
                       scope: nil },
                     { type: 'questions',
@@ -171,12 +207,15 @@ module DeepUnrest
                       id: ".#{a2.id}",
                       action: :destroy,
                       scope_type: :destroy,
+                      path: "#{survey_path}.#{q2_path}.#{a2_path}",
+                      index: 2,
                       klass: Answer,
                       scope: { base: Answer,
                                method: :find,
                                arguments: [a2.id.to_s] } }]
 
         scopes = DeepUnrest.collect_all_scopes(params)
+
         assert_equal expected, scopes
       end
     end
@@ -195,27 +234,29 @@ module DeepUnrest
         expected = {
           surveys: {
             klass: Survey,
-            '1' => {
-              update: {
-                method: :update,
-                body: {
-                  id: '1',
-                  questions_attributes: [
-                    {
-                      id: '2',
-                      answers_attributes: [
-                        {
-                          id: nil,
-                          attachments_attributes: [
-                            {
-                              id: nil,
-                              title: value
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
+            operations: {
+              '1' => {
+                update: {
+                  method: :update,
+                  body: {
+                    id: '1',
+                    questions_attributes: [
+                      {
+                        id: '2',
+                        answers_attributes: [
+                          {
+                            id: nil,
+                            attachments_attributes: [
+                              {
+                                id: nil,
+                                title: value
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -234,27 +275,29 @@ module DeepUnrest
         expected = {
           surveys: {
             klass: Survey,
-            '1' => {
-              update: {
-                method: :update,
-                body: {
-                  id: '1',
-                  questions_attributes: [
-                    {
-                      id: '2',
-                      answers_attributes: [
-                        {
-                          id: nil,
-                          attachments_attributes: [
-                            {
-                              id: '4',
-                              _destroy: true
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
+            operations: {
+              '1' => {
+                update: {
+                  method: :update,
+                  body: {
+                    id: '1',
+                    questions_attributes: [
+                      {
+                        id: '2',
+                        answers_attributes: [
+                          {
+                            id: nil,
+                            attachments_attributes: [
+                              {
+                                id: '4',
+                                _destroy: true
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -317,8 +360,8 @@ module DeepUnrest
         }
 
         assert_equal Survey, result[:surveys][:klass]
-        assert_equal expected, result[:surveys][survey.id.to_s][:update][:body]
-        assert_equal :update, result[:surveys][survey.id.to_s][:update][:method]
+        assert_equal expected, result[:surveys][:operations][survey.id.to_s][:update][:body]
+        assert_equal :update, result[:surveys][:operations][survey.id.to_s][:update][:method]
       end
     end
   end

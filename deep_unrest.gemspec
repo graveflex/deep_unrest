@@ -21,10 +21,9 @@ Gem::Specification.new do |s|
                 'Rakefile',
                 'README.md']
 
-  s.add_dependency 'rails', '~> 5.0.2'
+  s.add_dependency 'rails', '~> 5.1.0'
 
   s.add_development_dependency 'sqlite3'
-  s.add_development_dependency 'devise_token_auth', '0.1.40'
   s.add_development_dependency 'omniauth-github', '1.2.3'
   s.add_development_dependency 'pundit', '1.1.0'
   s.add_development_dependency 'dragonfly', '1.1.2'

@@ -15,13 +15,16 @@ gemspec
 # your gem to rubygems.org.
 
 group :development, :test do
+  gem 'devise', github: 'plataformatec/devise',
+                branch: 'master'
+  gem 'devise_token_auth', github: 'lynndylanhurley/devise_token_auth',
+                           branch: 'master'
   gem 'pry-rails'
   gem 'rubocop', '0.48.1', require: false
 end
 
 group :test do
   gem 'database_cleaner', '1.6.0'
-  gem 'devise_token_auth', '0.1.40'
   gem 'dragonfly', '1.1.2'
   gem 'faker', '1.7.3'
   gem 'omniauth-github', '1.2.3'
