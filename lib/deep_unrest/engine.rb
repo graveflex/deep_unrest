@@ -16,7 +16,7 @@ module DeepUnrest
   self.authentication_concern = DeepUnrest::Concerns::NullConcern
   self.get_user = proc { current_user }
 
-  def self.configure(&block)
+  def self.configure(&_block)
     yield self
   end
 end

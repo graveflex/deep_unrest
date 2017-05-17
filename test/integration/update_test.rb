@@ -29,10 +29,11 @@ class UpdateTest < ActionDispatch::IntegrationTest
     expected_error = "Applicant with id '#{user.id}' is not authorized to "\
                      "update Survey with id '#{survey.id}'"
 
-    err = assert_raises Pundit::NotAuthorizedError do
-      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
-    end
-    assert_equal expected_error, err.message
+    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+
+    assert_response 403
+    assert_equal expected_error, JSON.parse(response.body)[0]['title']
+    assert_equal survey_path, JSON.parse(response.body)[0]['source']['pointer']
   end
 
   test 'authorized users can make bulk updates to resources' do
@@ -101,6 +102,27 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     assert_equal 1, Survey.count
   end
+
+  test 'users cannot update un-allowed attributes' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+
+    body = [{ path: survey_path,
+              attributes: { name: Faker::TwinPeaks.location,
+                            approved: true } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
+
+    err = JSON.parse(response.body)[0]['title']
+    expected_error = 'Attributes [:approved] of Survey not allowed '\
+                     "to Applicant with id '#{user.id}'"
+
+    assert_response 405
+    assert_equal expected_error, err
+  end
+
 
   test 'users can only batch update resources within their scope' do
     user = applicants(:one)
@@ -197,9 +219,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
             { destroy: true,
               path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
-    assert_raises Pundit::NotAuthorizedError do
-      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
-    end
+    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+
+    assert_response 403
   end
 
   test 'validation errors are labeled with the correct path' do

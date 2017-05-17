@@ -22,7 +22,10 @@ module DeepUnrest
         unless %i[create update_all].include? scope[:scope_type]
           target += " with id '#{scope[:scope][:arguments].first}'"
         end
-        "#{actor} is not authorized to #{scope[:scope_type]} #{target}"
+        msg = "#{actor} is not authorized to #{scope[:scope_type]} #{target}"
+
+        [{ title: msg,
+           source: { pointer: scope[:path] } }].to_json
       end
 
       def self.get_entity_authorization(scope, user)
@@ -40,7 +43,7 @@ module DeepUnrest
         scopes.each do |s|
           allowed = get_entity_authorization(s, user)
           unless allowed
-            raise Pundit::NotAuthorizedError, auth_error_message(user, s)
+            raise DeepUnrest::Unauthorized, auth_error_message(user, s)
           end
         end
       end

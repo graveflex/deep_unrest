@@ -25,6 +25,9 @@ module DeepUnrest
   class Conflict < ::StandardError
   end
 
+  class Unauthorized < ::StandardError
+  end
+
   def self.to_class(str)
     str.classify.constantize
   end
@@ -126,16 +129,17 @@ module DeepUnrest
     p.resource_klass = resource
     ctx = { current_user: user }
     opts = if scope_type == :create
-             resource.updatable_fields(ctx)
-           else
              resource.creatable_fields(ctx)
+           else
+             resource.updatable_fields(ctx)
            end
 
     p.parse_params({ attributes: attributes }, opts)[:attributes]
   rescue JSONAPI::Exceptions::ParametersNotAllowed
-    unpermitted_keys = attributes.keys - opts
-    msg = "Keys #{unpermitted_keys} not allowed by #{type.classify}"
-    raise UnpermittedParams, msg
+    unpermitted_keys = attributes.keys.map(&:to_sym) - opts
+    msg = "Attributes #{unpermitted_keys} of #{type.classify} not allowed"
+    msg += " to #{user.class} with id '#{user.id}'" if user
+    raise UnpermittedParams, [{ title: msg }].to_json
   end
 
   def self.collect_action_scopes(operation)

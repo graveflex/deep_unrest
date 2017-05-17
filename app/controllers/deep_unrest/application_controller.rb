@@ -16,6 +16,10 @@ module DeepUnrest
       else
         render json: {}, status: 200
       end
+    rescue DeepUnrest::Unauthorized => err
+      render json: err.message, status: 403
+    rescue DeepUnrest::UnpermittedParams => err
+      render json: err.message, status: 405
     rescue DeepUnrest::Conflict => err
       render json: err.message, status: 409
     end
