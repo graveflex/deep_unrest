@@ -30,7 +30,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
                      "update Survey with id '#{survey.id}'"
 
     err = assert_raises Pundit::NotAuthorizedError do
-      patch '/update', auth_xhr_req({ data: body }, user)
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
     end
     assert_equal expected_error, err.message
   end
@@ -47,8 +47,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     body = [{ path: 'surveys.*',
               attributes: { approved: true } }]
 
-    patch '/update', auth_xhr_req({ data: body },
-                                  user)
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
 
     survey1.reload
     survey2.reload
@@ -69,8 +69,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     body = [{ path: 'surveys.*',
               destroy: true }]
 
-    patch '/update', auth_xhr_req({ data: body },
-                                  user)
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
 
     assert_raises ActiveRecord::RecordNotFound do
       survey1.reload
@@ -90,8 +90,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     body = [{ path: 'surveys.*',
               destroy: true }]
 
-    patch '/update', auth_xhr_req({ data: body },
-                                  user)
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
 
     assert_raises ActiveRecord::RecordNotFound do
       survey1.reload
@@ -111,8 +111,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     body = [{ path: 'surveys.*',
               attributes: { name: name } }]
 
-    patch '/update', auth_xhr_req({ data: body },
-                                  user)
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
 
     survey1.reload
     survey2.reload
@@ -147,9 +147,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
               path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
     redirect = "/surveys/#{survey.id}?include=questions,questions.answers"
-    patch '/update', auth_xhr_req({ data: body,
-                                    redirect: redirect },
-                                  user)
+    patch '/deep_unrest/update', auth_xhr_req({ data: body,
+                                                redirect: redirect },
+                                              user)
 
     # existing record was updated
     a1.reload
@@ -198,7 +198,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
               path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
     assert_raises Pundit::NotAuthorizedError do
-      patch '/update', auth_xhr_req({ data: body }, user)
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
     end
   end
 
@@ -227,7 +227,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
                             applicantId: user.id,
                             questionId: q1.id } }]
 
-    patch '/update', auth_xhr_req({ data: body }, user)
+    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
 
     expected_results = [{ title: 'Value is invalid',
                           detail: 'is invalid',
