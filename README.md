@@ -1,6 +1,9 @@
 # Deep UnREST
 
 [![CircleCI](https://circleci.com/gh/graveflex/deep_unrest.svg?style=svg)](https://circleci.com/gh/graveflex/deep_unrest)
+[![Test Coverage](https://codeclimate.com/github/graveflex/deep_unrest/badges/coverage.svg)](https://codeclimate.com/github/graveflex/deep_unrest/coverage)
+[![Code Climate](https://codeclimate.com/github/graveflex/deep_unrest/badges/gpa.svg)](https://codeclimate.com/github/graveflex/deep_unrest)
+[![Issue Count](https://codeclimate.com/github/graveflex/deep_unrest/badges/issue_count.svg)](https://codeclimate.com/github/graveflex/deep_unrest)
 
 <img src="/docs/img/logo.png" width="100%">
 
