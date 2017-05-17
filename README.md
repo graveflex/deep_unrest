@@ -1,5 +1,3 @@
-# DeepUnrest
-
 <img src="/docs/img/logo.png" width="100%">
 
 Short description and motivation.
