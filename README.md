@@ -5,7 +5,7 @@
 [![Code Climate](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/badges/36013471f0d2c4c6f875/gpa.svg)](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/feed)
 [![Issue Count](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/badges/36013471f0d2c4c6f875/issue_count.svg)](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/feed)
 
-<img src="/docs/img/logo.png" width="100%">
+<img src="/docs/img/logo.jpg" width="100%">
 
 Perform updates on deeply nested resources as well as bulk operations.
 
