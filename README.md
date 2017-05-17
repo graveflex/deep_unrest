@@ -1,6 +1,12 @@
+# Deep UnREST
+
+[![CircleCI](https://circleci.com/gh/graveflex/deep_unrest.svg?style=svg)](https://circleci.com/gh/graveflex/deep_unrest)
+
 <img src="/docs/img/logo.png" width="100%">
 
-Short description and motivation.
+Perform updates on deeply nested resources as well as bulk operations.
+
+## Goals
 
 ## Installation
 Add this line to your application's Gemfile:

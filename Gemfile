@@ -25,6 +25,7 @@ group :development, :test do
 end
 
 group :test do
+  gem 'codeclimate-test-reporter', require: nil
   gem 'database_cleaner', '1.6.0'
   gem 'dragonfly', '1.1.2'
   gem 'faker', '1.7.3'
