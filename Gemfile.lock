@@ -1,13 +1,4 @@
 GIT
-  remote: git://github.com/lynndylanhurley/devise_token_auth.git
-  revision: 7b9fddec85aa6e3578460d0ab12df51b29c92a86
-  branch: master
-  specs:
-    devise_token_auth (0.1.40)
-      devise (> 3.5.2, <= 4.2.1)
-      rails (< 6)
-
-GIT
   remote: git://github.com/plataformatec/devise.git
   revision: a62faa2c8258ba1c35fe84e147f42c35eccccb8a
   branch: master
@@ -77,6 +68,9 @@ GEM
     concurrent-ruby (1.0.5)
     database_cleaner (1.6.0)
     deep_merge (1.1.1)
+    devise_token_auth (0.1.41)
+      devise (> 3.5.2, <= 4.2.1)
+      rails (< 6)
     dragonfly (1.1.2)
       addressable (~> 2.3)
       multi_json (~> 1.0)
@@ -208,7 +202,7 @@ DEPENDENCIES
   deep_merge (= 1.1.1)
   deep_unrest!
   devise!
-  devise_token_auth!
+  devise_token_auth (~> 0.1.41)
   dragonfly (= 1.1.2)
   faker (= 1.7.3)
   jsonapi-resources (~> 0.9.0)

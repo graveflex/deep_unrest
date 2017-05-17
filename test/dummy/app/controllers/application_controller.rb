@@ -1,15 +1,15 @@
 class ApplicationController < JSONAPI::ResourceController
-  include DeviseTokenAuth::Concerns::SetUserByToken
+  include DeepUnrest.authentication_concern
   protect_from_forgery with: :null_session
 
   def context
-    { current_user: current_applicant || current_admin }
+    { current_user: current_user }
   end
 
   def update
     redirect = allowed_params[:redirect]
     DeepUnrest.perform_update(allowed_params[:data],
-                              current_applicant || current_admin)
+                              current_user)
     if redirect
       redirect_to redirect
     else
@@ -17,6 +17,10 @@ class ApplicationController < JSONAPI::ResourceController
     end
   rescue DeepUnrest::Conflict => err
     render json: err.message, status: 409
+  end
+
+  def current_user
+    instance_eval &DeepUnrest.get_user
   end
 
   def allowed_params

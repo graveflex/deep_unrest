@@ -17,8 +17,7 @@ gemspec
 group :development, :test do
   gem 'devise', github: 'plataformatec/devise',
                 branch: 'master'
-  gem 'devise_token_auth', github: 'lynndylanhurley/devise_token_auth',
-                           branch: 'master'
+  gem 'devise_token_auth', '~> 0.1.41'
   gem 'jsonapi-resources', '~> 0.9.0'
   gem 'jsonapi-utils', '~> 0.6.0.beta'
   gem 'pry-rails'
