@@ -7,8 +7,6 @@
 
 <img src="/docs/img/logo.jpg" width="100%">
 
-Perform updates on deeply nested resources as well as bulk operations.
-
 ## Goals
 
 * Allow updates and deletions of deeply nested resources
@@ -16,6 +14,10 @@ Perform updates on deeply nested resources as well as bulk operations.
 * Perform authorization on all affected resources
 * Control which params each user is allowed to update for each resource
 * Provide clear errors to the client
+
+## Caveats
+
+* This approach is not RESTful
 
 ## Installation
 Add this line to your application's Gemfile:
