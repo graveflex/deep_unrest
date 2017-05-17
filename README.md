@@ -1,9 +1,9 @@
 # Deep UnREST
 
 [![CircleCI](https://circleci.com/gh/graveflex/deep_unrest.svg?style=svg)](https://circleci.com/gh/graveflex/deep_unrest)
-[![Test Coverage](https://codeclimate.com/github/graveflex/deep_unrest/badges/coverage.svg)](https://codeclimate.com/github/graveflex/deep_unrest/coverage)
-[![Code Climate](https://codeclimate.com/github/graveflex/deep_unrest/badges/gpa.svg)](https://codeclimate.com/github/graveflex/deep_unrest)
-[![Issue Count](https://codeclimate.com/github/graveflex/deep_unrest/badges/issue_count.svg)](https://codeclimate.com/github/graveflex/deep_unrest)
+[![Test Coverage](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/badges/36013471f0d2c4c6f875/coverage.svg)](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/coverage)
+[![Code Climate](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/badges/36013471f0d2c4c6f875/gpa.svg)](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/feed)
+[![Issue Count](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/badges/36013471f0d2c4c6f875/issue_count.svg)](https://codeclimate.com/repos/591cc05fbd15c32ce10014b4/feed)
 
 <img src="/docs/img/logo.png" width="100%">
 
