@@ -11,6 +11,12 @@ Perform updates on deeply nested resources as well as bulk operations.
 
 ## Goals
 
+* Allow updates and deletions of deeply nested resources
+* Allow bulk updates and deletions
+* Perform authorization on all affected resources
+* Control which params each user is allowed to update for each resource
+* Provide clear errors to the client
+
 ## Installation
 Add this line to your application's Gemfile:
 
