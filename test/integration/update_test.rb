@@ -1,8 +1,8 @@
 require 'test_helper'
 
 class UpdateTest < ActionDispatch::IntegrationTest
-  test "authorization is performed when making updates" do
-    user = applicants(:confirmed_email_applicant)
+  test 'authorization is performed when making updates' do
+    user = applicants(:two)
     survey = surveys(:one)
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
@@ -17,16 +17,13 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_val = Faker::TwinPeaks.quote
     new_a_val = Faker::TwinPeaks.quote
 
-    body = [{ action: 'update',
-              path: survey_path,
+    body = [{ path: survey_path,
               attributes: { name: survey_name } },
-            { action: 'update',
-              path: "#{survey_path}.#{q1_path}.#{a1_path}",
+            { path: "#{survey_path}.#{q1_path}.#{a1_path}",
               attributes: { value: a1_val } },
-            { action: 'create',
-              path: "#{survey_path}.#{q1_path}.answers[1]",
+            { path: "#{survey_path}.#{q1_path}.answers[1]",
               attributes: { value: new_a_val } },
-            { action: 'destroy',
+            { destroy: true,
               path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
     expected_error = "Applicant with id '#{user.id}' is not authorized to "\
@@ -38,8 +35,94 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_equal expected_error, err.message
   end
 
+  test 'authorized users can make bulk updates to resources' do
+    user = admins(:one)
+    survey1 = surveys(:one)
+    survey2 = surveys(:one)
+
+    # sanity check
+    refute survey1.approved
+    refute survey2.approved
+
+    body = [{ path: 'surveys.*',
+              attributes: { approved: true } }]
+
+    patch '/update', auth_xhr_req({ data: body },
+                                  user)
+
+    survey1.reload
+    survey2.reload
+
+    assert survey1.approved
+    assert survey2.approved
+  end
+
+  test 'authorized users can destroy resources in bulk' do
+    user = admins(:one)
+    survey1 = surveys(:one)
+    survey2 = surveys(:one)
+
+    # sanity check
+    refute survey1.approved
+    refute survey2.approved
+
+    body = [{ path: 'surveys.*',
+              destroy: true }]
+
+    patch '/update', auth_xhr_req({ data: body },
+                                  user)
+
+    assert_raises ActiveRecord::RecordNotFound do
+      survey1.reload
+    end
+    assert_raises ActiveRecord::RecordNotFound do
+      survey2.reload
+    end
+
+    assert_equal 0, Survey.count
+  end
+
+  test 'authorized users can only destroy resources within their scope' do
+    user = applicants(:one)
+    survey1 = surveys(:one)
+    survey2 = surveys(:two)
+
+    body = [{ path: 'surveys.*',
+              destroy: true }]
+
+    patch '/update', auth_xhr_req({ data: body },
+                                  user)
+
+    assert_raises ActiveRecord::RecordNotFound do
+      survey1.reload
+    end
+
+    survey2.reload
+
+    assert_equal 1, Survey.count
+  end
+
+  test 'users can only batch update resources within their scope' do
+    user = applicants(:one)
+    survey1 = surveys(:one)
+    survey2 = surveys(:two)
+    name = Faker::TwinPeaks.location
+
+    body = [{ path: 'surveys.*',
+              attributes: { name: name } }]
+
+    patch '/update', auth_xhr_req({ data: body },
+                                  user)
+
+    survey1.reload
+    survey2.reload
+
+    assert_equal name, survey1.name
+    refute_equal name, survey2.name
+  end
+
   test 'users can update deeply nested resources that they have access to' do
-    user = applicants(:confirmed_email_applicant)
+    user = applicants(:one)
     survey = surveys(:one)
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
@@ -53,19 +136,20 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_val = Faker::TwinPeaks.quote
     new_a_val = Faker::TwinPeaks.quote
 
-    body = [{ action: 'update',
-              path: "#{survey_path}.#{q1_path}.#{a1_path}",
+    body = [{ path: "#{survey_path}.#{q1_path}.#{a1_path}",
               attributes: { value: a1_val } },
-            { action: 'create',
-              path: "#{survey_path}.#{q1_path}.answers[1]",
+            { path: "#{survey_path}.#{q1_path}.answers[1]",
               attributes: { value: new_a_val,
-                            applicant_id: user.id,
-                            survey_id: survey.id,
-                            question_id: q1.id } },
-            { action: 'destroy',
+                            applicantId: user.id,
+                            surveyId: survey.id,
+                            questionId: q1.id } },
+            { destroy: true,
               path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
-    patch '/update', auth_xhr_req({ data: body }, user)
+    redirect = "/surveys/#{survey.id}?include=questions,questions.answers"
+    patch '/update', auth_xhr_req({ data: body,
+                                    redirect: redirect },
+                                  user)
 
     # existing record was updated
     a1.reload
@@ -78,10 +162,48 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     # new record was created
     assert_equal Answer.last.value, new_a_val
+
+    assert_response :redirect
+    follow_redirect!
+
+    assert_response :success
+  end
+
+  test 'users cannot update attributes that they do not have access to' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+    q1 = questions(:one)
+    q1_path = "questions.#{q1.id}"
+    q2 = questions(:two)
+    q2_path = "questions.#{q2.id}"
+    a1 = answers(:one)
+    a1_path = "answers.#{a1.id}"
+    a2 = answers(:two)
+    a2_path = "answers.#{a2.id}"
+    a1_val = Faker::TwinPeaks.quote
+    new_a_val = Faker::TwinPeaks.quote
+    q1_val = Faker::TwinPeaks.quote
+
+    body = [{ path: "#{survey_path}.#{q1_path}.#{a1_path}",
+              attributes: { value: a1_val } },
+            { path: "#{survey_path}.#{q1_path}",
+              attributes: { content: q1_val } },
+            { path: "#{survey_path}.#{q1_path}.answers[1]",
+              attributes: { value: new_a_val,
+                            applicant_id: user.id,
+                            survey_id: survey.id,
+                            question_id: q1.id } },
+            { destroy: true,
+              path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
+
+    assert_raises Pundit::NotAuthorizedError do
+      patch '/update', auth_xhr_req({ data: body }, user)
+    end
   end
 
   test 'validation errors are labeled with the correct path' do
-    user = applicants(:confirmed_email_applicant)
+    user = applicants(:one)
     survey = surveys(:one)
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
@@ -89,24 +211,21 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
     a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
 
-    body = [{ action: 'create',
-              path: "#{survey_path}.#{q1_path}.answers[1]",
-              attributes: { survey_id: survey.id,
+    body = [{ path: "#{survey_path}.#{q1_path}.answers[1]",
+              attributes: { surveyId: survey.id,
                             value: a1_val,
-                            applicant_id: user.id,
-                            question_id: q1.id } },
-            { action: 'create',
-              path: "#{survey_path}.#{q1_path}.answers[2]",
-              attributes: { survey_id: survey.id,
+                            applicantId: user.id,
+                            questionId: q1.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[2]",
+              attributes: { surveyId: survey.id,
                             value: Faker::TwinPeaks.quote,
-                            applicant_id: user.id,
-                            question_id: q1.id } },
-            { action: 'create',
-              path: "#{survey_path}.#{q1_path}.answers[3]",
-              attributes: { survey_id: survey.id,
+                            applicantId: user.id,
+                            questionId: q1.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[3]",
+              attributes: { surveyId: survey.id,
                             value: a2_val,
-                            applicant_id: user.id,
-                            question_id: q1.id } }]
+                            applicantId: user.id,
+                            questionId: q1.id } }]
 
     patch '/update', auth_xhr_req({ data: body }, user)
 
@@ -124,6 +243,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
     errors = JSON.parse(response.body)['errors'].map do |e|
       ActiveSupport::HashWithIndifferentAccess.new(e).deep_symbolize_keys
     end
+
     assert_response 409
     assert_equal expected_results, errors
   end

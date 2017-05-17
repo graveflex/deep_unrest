@@ -19,6 +19,8 @@ group :development, :test do
                 branch: 'master'
   gem 'devise_token_auth', github: 'lynndylanhurley/devise_token_auth',
                            branch: 'master'
+  gem 'jsonapi-resources', '~> 0.9.0'
+  gem 'jsonapi-utils', '~> 0.6.0.beta'
   gem 'pry-rails'
   gem 'rubocop', '0.48.1', require: false
 end

@@ -74,15 +74,19 @@ module DeepUnrest
 
     class IdentifyScopes < ActiveSupport::TestCase
       test 'derives scope type from id' do
-        assert_equal :show, DeepUnrest.get_scope_type('.0')
-        assert_equal :show, DeepUnrest.get_scope_type('.123')
-        assert_equal :show, DeepUnrest.get_scope_type('.abcdef')
-        assert_equal :create, DeepUnrest.get_scope_type('[0]')
-        assert_equal :create, DeepUnrest.get_scope_type('[123]')
-        assert_equal :update_all, DeepUnrest.get_scope_type('.*')
+        assert_equal :show, DeepUnrest.get_scope_type('.0', false, false)
+        assert_equal :show, DeepUnrest.get_scope_type('.123', false, false)
+        assert_equal :show, DeepUnrest.get_scope_type('.abcdef', false, false)
+        assert_equal :update, DeepUnrest.get_scope_type('.abcdef', true, false)
+        assert_equal :destroy, DeepUnrest.get_scope_type('.abcdef', true, true)
+        assert_equal :create, DeepUnrest.get_scope_type('[0]', false, false)
+        assert_equal :create, DeepUnrest.get_scope_type('[123]', false, false)
+        assert_equal :index, DeepUnrest.get_scope_type('.*', false, false)
+        assert_equal :update_all, DeepUnrest.get_scope_type('.*', true, false)
+        assert_equal :destroy_all, DeepUnrest.get_scope_type('.*', true, true)
 
         assert_raises DeepUnrest::InvalidId do
-          DeepUnrest.get_scope_type('dingus')
+          DeepUnrest.get_scope_type('dingus', false, false)
         end
       end
 
@@ -153,7 +157,6 @@ module DeepUnrest
 
         expected = [{ type: 'surveys',
                       id: ".#{survey.id}",
-                      action: :update,
                       scope_type: :update,
                       klass: Survey,
                       path: survey_path,
@@ -163,7 +166,6 @@ module DeepUnrest
                                arguments: [survey.id.to_s] } },
                     { type: 'surveys',
                       id: ".#{survey.id}",
-                      action: nil,
                       scope_type: :show,
                       klass: Survey,
                       scope: { base: Survey,
@@ -171,7 +173,6 @@ module DeepUnrest
                                arguments: [survey.id.to_s] } },
                     { type: 'questions',
                       id: ".#{q1.id}",
-                      action: nil,
                       scope_type: :show,
                       klass: Question,
                       scope: { base: Question,
@@ -179,7 +180,6 @@ module DeepUnrest
                                arguments: [q1.id.to_s] } },
                     { type: 'answers',
                       id: ".#{a1.id}",
-                      action: :update,
                       scope_type: :update,
                       path: "#{survey_path}.#{q1_path}.#{a1_path}",
                       index: 0,
@@ -189,7 +189,6 @@ module DeepUnrest
                                arguments: [a1.id.to_s] } },
                     { type: 'answers',
                       id: '[1]',
-                      action: :create,
                       scope_type: :create,
                       path: "#{survey_path}.#{q1_path}.answers[1]",
                       index: 1,
@@ -197,7 +196,6 @@ module DeepUnrest
                       scope: nil },
                     { type: 'questions',
                       id: ".#{q2.id}",
-                      action: nil,
                       scope_type: :show,
                       klass: Question,
                       scope: { base: Question,
@@ -205,8 +203,7 @@ module DeepUnrest
                                arguments: [q2.id.to_s] } },
                     { type: 'answers',
                       id: ".#{a2.id}",
-                      action: :destroy,
-                      scope_type: :destroy,
+                      scope_type: :update,
                       path: "#{survey_path}.#{q2_path}.#{a2_path}",
                       index: 2,
                       klass: Answer,
@@ -222,14 +219,16 @@ module DeepUnrest
 
     class BuildUpdateBody < ActiveSupport::TestCase
       test 'creates a fragment of the update body using the operation path' do
+        user = applicants(:one)
         path = 'surveys.1.questions.2.answers[3].attachments[4]'
         action = :update
         value = Faker::TwinPeaks.quote
-        body_part = DeepUnrest.build_mutation_fragment(path: path,
-                                                       attributes: {
-                                                         title: value
-                                                       },
-                                                       action: action)
+        body_part = DeepUnrest.build_mutation_fragment({ path: path,
+                                                         attributes: {
+                                                           title: value
+                                                         },
+                                                         action: action },
+                                                       user)
 
         expected = {
           surveys: {
@@ -245,10 +244,8 @@ module DeepUnrest
                         id: '2',
                         answers_attributes: [
                           {
-                            id: nil,
                             attachments_attributes: [
                               {
-                                id: nil,
                                 title: value
                               }
                             ]
@@ -267,10 +264,11 @@ module DeepUnrest
       end
 
       test 'marks fragments to be destroyed' do
+        user = applicants(:one)
         path = 'surveys.1.questions.2.answers[3].attachments.4'
-        action = :destroy
-        body_part = DeepUnrest.build_mutation_fragment(path: path,
-                                                       action: action)
+        body_part = DeepUnrest.build_mutation_fragment({ path: path,
+                                                         destroy: true },
+                                                       user)
 
         expected = {
           surveys: {
@@ -286,7 +284,6 @@ module DeepUnrest
                         id: '2',
                         answers_attributes: [
                           {
-                            id: nil,
                             attachments_attributes: [
                               {
                                 id: '4',
@@ -303,10 +300,12 @@ module DeepUnrest
             }
           }
         }
+
         assert_equal expected, body_part
       end
 
       test 'recursively merges fragments into update body' do
+        user = applicants(:one)
         survey = surveys(:one)
         survey_path = "surveys.#{survey.id}"
         q1 = questions(:one)
@@ -321,19 +320,16 @@ module DeepUnrest
         a1_val = Faker::TwinPeaks.quote
         new_a_val = Faker::TwinPeaks.quote
 
-        params = [{ action: 'update',
-                    path: survey_path,
+        params = [{ path: survey_path,
                     attributes: { name: survey_name } },
-                  { action: 'update',
-                    path: "#{survey_path}.#{q1_path}.#{a1_path}",
+                  { path: "#{survey_path}.#{q1_path}.#{a1_path}",
                     attributes: { value: a1_val } },
-                  { action: 'create',
-                    path: "#{survey_path}.#{q1_path}.answers[1]",
+                  { path: "#{survey_path}.#{q1_path}.answers[1]",
                     attributes: { value: new_a_val } },
-                  { action: 'destroy',
+                  { destroy: true,
                     path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
-        result = DeepUnrest.build_mutation_body(params)
+        result = DeepUnrest.build_mutation_body(params, user)
 
         expected = {
           id: survey.id.to_s,
@@ -347,7 +343,6 @@ module DeepUnrest
           }, {
             id: q1.id.to_s,
             answers_attributes: [{
-              id: nil,
               value: new_a_val
             }]
           }, {

@@ -2,13 +2,18 @@
 
 module DeepUnrest
   module Authorization
-    class PunditStrategy
+    class PunditStrategy < DeepUnrest::Authorization::BaseStrategy
       def self.get_policy_name(method)
         "#{method}?".to_sym
       end
 
+      def self.get_policy(klass)
+        "#{klass}Policy".constantize
+      end
+
       def self.get_authorized_scope(user, klass)
-        Pundit.policy_scope!(user, klass)
+        policy = get_policy(klass)
+        policy::Scope.new(user, klass).resolve
       end
 
       def self.auth_error_message(user, scope)
@@ -21,12 +26,13 @@ module DeepUnrest
       end
 
       def self.get_entity_authorization(scope, user)
-        if scope[:scope]
+        if %i[create update_all index destroy_all].include?(scope[:scope_type])
+          target = scope[:klass]
+        else
           target = scope[:scope][:base].send(scope[:scope][:method],
                                              *scope[:scope][:arguments])
-        else
-          target = scope[:klass]
         end
+
         Pundit.policy!(user, target).send(get_policy_name(scope[:scope_type]))
       end
 

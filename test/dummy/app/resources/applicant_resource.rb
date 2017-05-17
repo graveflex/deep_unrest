@@ -1,0 +1,2 @@
+class ApplicantResource < BaseResource
+end

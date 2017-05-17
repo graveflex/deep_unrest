@@ -1,4 +1,6 @@
 module DeepUnrest
-  class NoneStrategy
+  module Authorization
+    class NoneStrategy < DeepUnrest::Authorization::BaseStrategy
+    end
   end
 end

@@ -1,6 +1,17 @@
 <% timestamp = DateTime.parse(2.weeks.ago.to_s).to_time.strftime("%F %T") %>
 <% email = Faker::Internet.email %>
-confirmed_email_applicant:
+one:
+  uid:                "<%= email %>"
+  email:              "<%= email %>"
+  nickname:           'confirmed-email-applicant'
+  provider:           'email'
+  confirmed_at:       '<%= timestamp %>'
+  created_at:         '<%= timestamp %>'
+  updated_at:         '<%= timestamp %>'
+  encrypted_password: <%= Applicant.new.send(:password_digest, 'secret123') %>
+
+<% email = Faker::Internet.email %>
+two:
   uid:                "<%= email %>"
   email:              "<%= email %>"
   nickname:           'confirmed-email-applicant'

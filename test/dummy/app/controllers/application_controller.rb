@@ -1,18 +1,27 @@
-class ApplicationController < ActionController::Base
+class ApplicationController < JSONAPI::ResourceController
   include DeviseTokenAuth::Concerns::SetUserByToken
   protect_from_forgery with: :null_session
 
+  def context
+    { current_user: current_applicant || current_admin }
+  end
+
   def update
-    resp = DeepUnrest.perform_update(allowed_params[:data], current_applicant)
-    if resp[:errors]
-      render json: { errors: resp[:errors] }, status: resp[:status]
+    redirect = allowed_params[:redirect]
+    DeepUnrest.perform_update(allowed_params[:data],
+                              current_applicant || current_admin)
+    if redirect
+      redirect_to redirect
     else
-      render json: { data: resp[:data] }, status: resp[:status]
+      render json: {}, status: 200
     end
+  rescue DeepUnrest::Conflict => err
+    render json: err.message, status: 409
   end
 
   def allowed_params
-    params.permit(data: [:action,
+    params.permit(:redirect,
+                  data: [:destroy,
                          :path,
                          { attributes: {} }])
   end

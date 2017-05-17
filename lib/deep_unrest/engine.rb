@@ -1,3 +1,5 @@
+require 'deep_unrest/authorization/base_strategy'
+require 'deep_unrest/authorization/none_strategy'
 require 'deep_unrest/authorization/pundit_strategy'
 
 module DeepUnrest

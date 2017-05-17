@@ -19,6 +19,12 @@ module DeepUnrest
   class InvalidId < ::StandardError
   end
 
+  class UnpermittedParams < ::StandardError
+  end
+
+  class Conflict < ::StandardError
+  end
+
   def self.to_class(str)
     str.classify.constantize
   end
@@ -31,14 +37,34 @@ module DeepUnrest
     "#{str.pluralize}Attributes".underscore.to_sym
   end
 
-  def self.get_scope_type(id)
+  def self.get_resource(type)
+    "#{type.classify}Resource".constantize
+  end
+
+  def self.get_scope_type(id, last, destroy)
     case id
     when /^\[\w+\]$/
       :create
     when /^\.\w+$/
-      :show
+      if last
+        if destroy
+          :destroy
+        else
+          :update
+        end
+      else
+        :show
+      end
     when /^\.\*$/
-      :update_all
+      if last
+        if destroy
+          :destroy_all
+        else
+          :update_all
+        end
+      else
+        :index
+      end
     else
       raise InvalidId, "Unknown ID format: #{id}"
     end
@@ -47,14 +73,7 @@ module DeepUnrest
   # verify that this is an actual association of the parent class.
   def self.add_parent_scope(parent, type)
     reflection = parent[:klass].reflect_on_association(to_assoc(type))
-    raise NoMethodError unless reflection.klass == to_class(type)
-    unless parent[:id]
-      raise InvalidParentScope, 'Unable to update associations of collections '\
-                                "('#{parent[:type]}.#{type}')."
-    end
     { base: parent[:scope], method: reflection.name }
-  rescue NoMethodError
-    raise InvalidAssociation, "'#{parent[:type]}' has no association '#{type}'"
   end
 
   def self.validate_association(parent, type)
@@ -74,8 +93,13 @@ module DeepUnrest
     when :show, :update, :destroy
       id = /^\.(?<id>\d+)$/.match(id_str)[:id]
       { base: to_class(type), method: :find, arguments: [id] }
-    when :update_all
-      add_parent_scope(memo[memo.size - 1], type)
+    when :update_all, :index
+      if memo.empty?
+        { base: to_class(type), method: :all }
+      else
+        add_parent_scope(memo[memo.size - 1], type)
+      end
+    # TODO: delete this condition
     when :all
       { base: to_class(type), method: :all }
     end
@@ -96,15 +120,33 @@ module DeepUnrest
     indices
   end
 
+  def self.parse_attributes(type, scope_type, attributes, user)
+    p = JSONAPI::RequestParser.new
+    resource = get_resource(type)
+    p.resource_klass = resource
+    ctx = { current_user: user }
+    opts = if scope_type == :create
+             resource.updatable_fields(ctx)
+           else
+             resource.creatable_fields(ctx)
+           end
+
+    p.parse_params({ attributes: attributes }, opts)[:attributes]
+  rescue JSONAPI::Exceptions::ParametersNotAllowed
+    unpermitted_keys = attributes.keys - opts
+    msg = "Keys #{unpermitted_keys} not allowed by #{type.classify}"
+    raise UnpermittedParams, msg
+  end
+
   def self.collect_action_scopes(operation)
     resources = parse_path(operation[:path])
     resources.each_with_object([]) do |(type, id), memo|
       validate_association(memo.last, type)
-      action = memo.size == resources.size - 1 ? operation[:action].to_sym : nil
-      scope_type = action || get_scope_type(id)
+      scope_type = get_scope_type(id,
+                                  memo.size == resources.size - 1,
+                                  operation[:destroy])
       scope = get_scope(scope_type, memo, type, id)
       context = { type: type,
-                  action: action,
                   scope_type: scope_type,
                   scope: scope,
                   klass: to_class(type),
@@ -133,35 +175,47 @@ module DeepUnrest
     id_match && id_match[:id]
   end
 
-  def self.set_action(cursor, operation)
-    case operation[:action].to_sym
+  def self.set_action(cursor, operation, type, user)
+    # TODO: this is horrible. find a better way to go about this
+    action = get_scope_type(parse_path(operation[:path]).last[1],
+                            true,
+                            operation[:destroy])
+
+    case action
     when :destroy
       cursor[:_destroy] = true
-    when :update, :create
-      cursor.merge! operation[:attributes]
+    when :update, :create, :update_all
+      cursor.merge! parse_attributes(type,
+                                     operation[:action],
+                                     operation[:attributes],
+                                     user)
     end
     cursor
   end
 
-  def self.get_mutation_cursor(memo, cursor, addr, type, id)
-    # TODO: here - determine source (Model) + call (update / update_all)
+  def self.get_mutation_cursor(memo, cursor, addr, type, id, destroy)
     if memo
       cursor[addr] = [{}]
       next_cursor = cursor[addr][0]
     else
       cursor = {}
       type_sym = type.to_sym
-      method = id ? :update : :update_all
+      if destroy
+        method = id ? :update : :destroy_all
+      else
+        method = id ? :update : :update_all
+      end
+      klass = to_class(type)
+      body = {}
+      body[klass.primary_key.to_sym] = id if id
       cursor[type_sym] = {
-        klass: to_class(type)
+        klass: klass
       }
       cursor[type_sym][:operations] = {}
       cursor[type_sym][:operations][id] = {}
       cursor[type_sym][:operations][id][method] = {
         method: method,
-        body: {
-          id: id
-        }
+        body: body
       }
       memo = cursor
       next_cursor = cursor[type_sym][:operations][id][method][:body]
@@ -169,11 +223,11 @@ module DeepUnrest
     [memo, next_cursor]
   end
 
-  def self.build_mutation_fragment(op, rest = nil, memo = nil, cursor = nil)
+  def self.build_mutation_fragment(op, user, rest = nil, memo = nil, cursor = nil, type = nil)
     rest ||= parse_path(op[:path])
 
     if rest.empty?
-      set_action(cursor, op)
+      set_action(cursor, op, type, user)
       return memo
     end
 
@@ -181,23 +235,33 @@ module DeepUnrest
     addr = to_update_body_key(type)
     id = parse_id(id_str)
 
-    memo, next_cursor = get_mutation_cursor(memo, cursor, addr, type, id)
+    memo, next_cursor = get_mutation_cursor(memo, cursor, addr, type, id, op[:destroy])
 
-    next_cursor[:id] = id
-    build_mutation_fragment(op, rest, memo, next_cursor)
+    next_cursor[:id] = id if id
+    build_mutation_fragment(op, user, rest, memo, next_cursor, type)
   end
 
-  def self.build_mutation_body(ops)
+  def self.build_mutation_body(ops, user)
     ops.each_with_object({}) do |op, memo|
-      memo.deeper_merge(build_mutation_fragment(op))
+      memo.deeper_merge(build_mutation_fragment(op, user))
     end
   end
 
-  def self.mutate(mutation)
+  def self.mutate(mutation, user)
     mutation.map do |_, item|
       item[:operations].map do |id, ops|
-        ops.map do |op_name, action|
+        ops.map do |_, action|
           case action[:method]
+          when :update_all
+            DeepUnrest.authorization_strategy
+                      .get_authorized_scope(user, item[:klass])
+                      .update(action[:body])
+            nil
+          when :destroy_all
+            DeepUnrest.authorization_strategy
+                      .get_authorized_scope(user, item[:klass])
+                      .destroy_all
+            nil
           when :update
             item[:klass].update(id, action[:body])
           when :create
@@ -226,10 +290,10 @@ module DeepUnrest
     end
   end
 
-  def self.map_errors_to_param_keys(scopes, errors)
-    errors.map do |err|
-      err.messages.map do |key, values|
-        path_info = parse_error_path(key)
+  def self.map_errors_to_param_keys(scopes, ops)
+    ops.map do |errors|
+      errors.map do |key, values|
+        path_info = parse_error_path(key.to_s)
         operation = scopes.find do |s|
           s[:type] == path_info[:type] && s[:index] == path_info[:idx].to_i
         end
@@ -246,31 +310,25 @@ module DeepUnrest
     # authorize user for requested scope(s)
     DeepUnrest.authorization_strategy.authorize(scopes, user).flatten
 
-    # should have a map like:
-    # { [type]: { [action]: { [id]: entity } }
-    # { [type]: { [action]: { [scope]: collection } }
+    # bulid update arguments
+    mutations = build_mutation_body(params, user)
 
-    # collect mutations
-    mutations = build_mutation_body(params)
+    # perform update
+    results = mutate(mutations, user).flatten
 
-    results = mutate(mutations).flatten
+    # check results for errors
+    errors = results.compact
+                    .map(&:errors)
+                    .map(&:messages)
+                    .reject(&:empty?)
+                    .compact
 
-    errors = results.map(&:errors).compact
+    return if errors.empty?
 
-    unless errors.empty?
-      formatted_errors = map_errors_to_param_keys(scopes, errors)
-      return { status: 409,
-               errors: formatted_errors }
-    end
+    # map errors to their sources
+    formatted_errors = { errors: map_errors_to_param_keys(scopes, errors) }
 
-    { status: 200,
-      data: format_results(scopes) }
-
-    # perform transaction
-    # if success:
-    #   redirect to endpont
-    # else
-    #   build errors
-    #   return errors
+    # raise error if there are any errors
+    raise Conflict, formatted_errors.to_json unless formatted_errors.empty?
   end
 end

@@ -26,13 +26,13 @@ module ActiveSupport
     end
 
     # create a confirmed email user
-    def create_authed_applicant(user = applicants(:confirmed_email_applicant))
+    def create_authed_applicant(user = applicants(:one))
       user.save!
       user
     end
 
     # create admin user
-    def create_authed_admin(admin = admins(:confirmed_email_admin))
+    def create_authed_admin(admin = admins(:one))
       admin.save!
       admin
     end

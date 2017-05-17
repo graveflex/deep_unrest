@@ -2,7 +2,8 @@
 
 one:
   name: <%= Faker::Pokemon.name %>
-  applicant: confirmed_email_applicant
+  applicant: one
 
 two:
   name: <%= Faker::Pokemon.name %>
+  applicant: two

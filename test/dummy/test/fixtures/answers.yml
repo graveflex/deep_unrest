@@ -1,13 +1,20 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  applicant: confirmed_email_applicant
-  value: '<%= Faker::TwinPeaks.character %>'
+  applicant: one
+  value: "<%= Faker::TwinPeaks.character %>"
   question: one
   survey: one
 
 two:
-  applicant: confirmed_email_applicant
-  value: '<%= Faker::TwinPeaks.character %>'
+  applicant: one
+  value: "<%= Faker::TwinPeaks.character %>"
   question: two
   survey: one
+
+
+three:
+  applicant: two
+  value: "<%= Faker::TwinPeaks.character %>"
+  question: one
+  survey: two
