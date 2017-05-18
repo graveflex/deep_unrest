@@ -55,7 +55,7 @@ $ bundle
       # config.get_user = proc { current_admin || current_user }
 
       # stategy that will be used to authorize the current user for each resource
-      self.authorization_strategy = DeepUnrest::Authorization::PunditStrategy
+      config.authorization_strategy = DeepUnrest::Authorization::PunditStrategy
     end
     ```
 
