@@ -109,7 +109,7 @@ within their policy scope.
 ```
 
 ##### 405 Response:
-This error will occur when a is allowed to update a resource, but not
+This error will occur when a user is allowed to update a resource, but not
 specified attributes of that resource.
 
 ```javascript
