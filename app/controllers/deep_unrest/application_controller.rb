@@ -9,10 +9,10 @@ module DeepUnrest
 
     def update
       redirect = allowed_params[:redirect]
-      DeepUnrest.perform_update(allowed_params[:data],
-                                current_user)
+      redirect_replace = DeepUnrest.perform_update(allowed_params[:data],
+                                                   current_user)
       if redirect
-        redirect_to redirect
+        redirect_to redirect_replace.call(redirect)
       else
         render json: {}, status: 200
       end

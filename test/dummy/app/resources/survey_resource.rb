@@ -1,6 +1,7 @@
 class SurveyResource < BaseResource
   attributes :name,
-             :approved
+             :approved,
+             :applicant_id
   has_many :questions
   has_one :applicant
 

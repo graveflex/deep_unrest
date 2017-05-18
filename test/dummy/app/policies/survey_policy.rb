@@ -3,6 +3,10 @@ class SurveyPolicy < ApplicationPolicy
     user.class == Admin || user == record.applicant
   end
 
+  def create?
+    user
+  end
+
   def update_all?
     user
   end

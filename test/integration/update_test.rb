@@ -269,4 +269,21 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_response 409
     assert_equal expected_results, errors
   end
+
+  test 'replaces temp_ids in redirects with new actual ids' do
+    user = applicants(:one)
+
+    body = [{ path: 'surveys[1]',
+              attributes: { name: Faker::TwinPeaks.quote,
+                            applicantId: user.id } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body,
+                                                redirect: '/surveys/[1]' },
+                                              user)
+
+    survey = Survey.last
+
+    assert_response :redirect
+    assert_redirected_to "/surveys/#{survey.id}"
+  end
 end

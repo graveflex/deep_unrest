@@ -197,18 +197,14 @@ module DeepUnrest
     cursor
   end
 
-  def self.get_mutation_cursor(memo, cursor, addr, type, id, destroy)
+  def self.get_mutation_cursor(memo, cursor, addr, type, id, temp_id, scope_type)
     if memo
       cursor[addr] = [{}]
       next_cursor = cursor[addr][0]
     else
+      method = scope_type == :show ? :update : scope_type
       cursor = {}
       type_sym = type.to_sym
-      if destroy
-        method = id ? :update : :destroy_all
-      else
-        method = id ? :update : :update_all
-      end
       klass = to_class(type)
       body = {}
       body[klass.primary_key.to_sym] = id if id
@@ -221,6 +217,7 @@ module DeepUnrest
         method: method,
         body: body
       }
+      cursor[type_sym][:operations][id][method][:temp_id] = temp_id if temp_id
       memo = cursor
       next_cursor = cursor[type_sym][:operations][id][method][:body]
     end
@@ -238,8 +235,16 @@ module DeepUnrest
     type, id_str = rest.shift
     addr = to_update_body_key(type)
     id = parse_id(id_str)
+    scope_type = get_scope_type(id_str, rest.blank?, op[:destroy])
+    temp_id = scope_type == :create ? id_str : nil
 
-    memo, next_cursor = get_mutation_cursor(memo, cursor, addr, type, id, op[:destroy])
+    memo, next_cursor = get_mutation_cursor(memo,
+                                            cursor,
+                                            addr,
+                                            type,
+                                            id,
+                                            temp_id,
+                                            scope_type)
 
     next_cursor[:id] = id if id
     build_mutation_fragment(op, user, rest, memo, next_cursor, type)
@@ -255,22 +260,28 @@ module DeepUnrest
     mutation.map do |_, item|
       item[:operations].map do |id, ops|
         ops.map do |_, action|
-          case action[:method]
-          when :update_all
-            DeepUnrest.authorization_strategy
-                      .get_authorized_scope(user, item[:klass])
-                      .update(action[:body])
-            nil
-          when :destroy_all
-            DeepUnrest.authorization_strategy
-                      .get_authorized_scope(user, item[:klass])
-                      .destroy_all
-            nil
-          when :update
-            item[:klass].update(id, action[:body])
-          when :create
-            item[:klass].create(action[:body])
+          record = case action[:method]
+                   when :update_all
+                     DeepUnrest.authorization_strategy
+                               .get_authorized_scope(user, item[:klass])
+                               .update(action[:body])
+                     nil
+                   when :destroy_all
+                     DeepUnrest.authorization_strategy
+                               .get_authorized_scope(user, item[:klass])
+                               .destroy_all
+                     nil
+                   when :update
+                     item[:klass].update(id, action[:body])
+                   when :create
+                     item[:klass].create(action[:body])
+                   end
+          result = { record: record }
+          if action[:temp_id]
+            result[:temp_ids] = {}
+            result[:temp_ids][action[:temp_id]] = record.id
           end
+          result
         end
       end
     end
@@ -307,6 +318,19 @@ module DeepUnrest
     end.flatten
   end
 
+  def self.build_redirect_regex(replacements)
+    replacements ||= []
+
+    replace_ops = replacements.map do |k, v|
+      proc { |str| str.sub(k.to_s, v.to_s) }
+    end
+
+    proc do |str|
+      replace_ops.each { |op| str = op.call(str) }
+      str
+    end
+  end
+
   def self.perform_update(params, user)
     # identify requested scope(s)
     scopes = collect_all_scopes(params)
@@ -321,13 +345,18 @@ module DeepUnrest
     results = mutate(mutations, user).flatten
 
     # check results for errors
-    errors = results.compact
+    errors = results.map { |res| res[:record] }
+                    .compact
                     .map(&:errors)
                     .map(&:messages)
                     .reject(&:empty?)
                     .compact
-
-    return if errors.empty?
+    if errors.empty?
+      temp_ids = results.map { |res| res[:temp_ids] }
+                        .compact
+                        .each_with_object({}) { |item, mem| mem.merge!(item) }
+      return build_redirect_regex(temp_ids)
+    end
 
     # map errors to their sources
     formatted_errors = { errors: map_errors_to_param_keys(scopes, errors) }

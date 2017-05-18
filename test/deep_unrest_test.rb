@@ -359,5 +359,20 @@ module DeepUnrest
         assert_equal :update, result[:surveys][:operations][survey.id.to_s][:update][:method]
       end
     end
+
+    class ReplaceTempIdsInRedirect < ActiveSupport::TestCase
+      test 'temp ids are replaced in the redirect url' do
+        map = { '[123]': 456, '[789]': 'xyz' }
+        redirect = '/resource/[123]/nested/[789]'
+        replace_proc = DeepUnrest.build_redirect_regex(map)
+        assert_equal '/resource/456/nested/xyz', replace_proc.call(redirect)
+      end
+
+      test 'redirect is unaffected when no redirects are present' do
+        redirect = '/resource/123/nested/4567'
+        replace_proc = DeepUnrest.build_redirect_regex(nil)
+        assert_equal redirect, replace_proc.call(redirect)
+      end
+    end
   end
 end
