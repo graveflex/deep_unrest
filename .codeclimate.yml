@@ -5,12 +5,12 @@ engines:
     enabled: true
     config:
       languages:
-      - ruby
+        - ruby
 ratings:
   paths:
-  - app/**
-  - lib/**
-  - "**.rb"
+    - app/**
+    - lib/**
+    - "**.rb"
 
 exclude_paths:
-- test/**/*
+  - test/**/*
