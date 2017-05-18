@@ -61,6 +61,10 @@ $ bundle
 
 ## Usage
 
+For the following examples, consider this data model:
+
+<img src="/docs/img/example-setup.jpg" width="100%">
+
 ### Example 1 - Simple Update:
 Update attributes on a single `Submission` with id `123`
 
@@ -167,6 +171,7 @@ resource. The temporary ID should be surrounded in brackets (`[]`).
 ```javascript
 // PATCH /deep_unrest/update
 {
+  redirect: '/submissions/[1]',
   data: [
     {
       path: 'submissions[1]',
@@ -175,6 +180,24 @@ resource. The temporary ID should be surrounded in brackets (`[]`).
       }
     }
   ]
+}
+```
+
+##### 200 Response:
+When a temp id (`[id]`) is present in the redirect url, the temp id will be
+replaced with the id given to the new resource. 
+
+Using the example above, assuming that the `Submission` at path
+`submissions[1]` was given the id `123`, the redirect request param of
+`/submissions/[1]` will be replaced with `/submissions/123`.
+
+```javascript
+{
+  id: 123,
+  type: 'submissions',
+  attributes: {
+    name: 'testing'
+  }
 }
 ```
 
@@ -198,7 +221,7 @@ example will perform the following operations:
 
 * Change the `name` column of `Submission` with id `123` to `test`
 * Change the `value` column of `Answer` with id `1` to `yes`
-* Create a new `Answer` with a value of `No` using temp ID `[1]`
+* Create a new `Answer` with a value of `no` using temp ID `[1]`
 * Delete the `Answer` with id `2`
 
 These operations will be performed within a single `ActiveRecord` transaction.
@@ -259,7 +282,7 @@ limited to the current user's allowed scope.
 ```
 
 ### Example 6 - Bulk Delete
-The following example will delete every submission.
+The following example will delete every `Submission`.
 
 When using an authorization strategy, the scope of the bulk delete will be
 limited to the current user's allowed scope.
