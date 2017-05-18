@@ -1,0 +1,14 @@
+engines:
+  rubocop:
+    enabled: true
+  duplication:
+    enabled: true
+            config:
+              languages:
+                - ruby
+                  #mass_threshold: 30
+                - javascript
+ratings:
+  paths:
+    - app/controllers/**/*
+    - lib/**/*
