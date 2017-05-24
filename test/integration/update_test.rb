@@ -284,6 +284,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey = Survey.last
 
     assert_response :redirect
+    assert_equal user.uid, response['uid']
+    assert response['access-token']
+    assert response['client']
     assert_redirected_to "/surveys/#{survey.id}"
   end
 

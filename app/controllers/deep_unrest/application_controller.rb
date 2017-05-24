@@ -12,6 +12,7 @@ module DeepUnrest
       redirect_replace = DeepUnrest.perform_update(allowed_params[:data],
                                                    current_user)
       if redirect
+        response.headers.merge! update_auth_header
         redirect_to redirect_replace.call(redirect)
       else
         render json: {}, status: 200
