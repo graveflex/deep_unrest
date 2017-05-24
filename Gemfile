@@ -2,8 +2,6 @@
 
 source 'https://rubygems.org'
 
-gem 'deep_merge', '1.1.1', require: 'deep_merge/rails_compat'
-
 # Declare your gem's dependencies in deep_unrest.gemspec.
 # Bundler will treat runtime dependencies like base dependencies, and
 # development dependencies will be added by default to the :development group.

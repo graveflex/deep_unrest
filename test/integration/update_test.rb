@@ -286,4 +286,20 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_redirected_to "/surveys/#{survey.id}"
   end
+
+  test 'simple destroy' do
+    user = applicants(:one)
+    survey = surveys(:one)
+
+    body = [{ path: "surveys.#{survey.id}",
+              destroy: true }]
+
+    assert_difference 'Survey.count', -1 do
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+    end
+
+    assert_raises ActiveRecord::RecordNotFound do
+      survey.reload
+    end
+  end
 end

@@ -7,6 +7,10 @@ class SurveyPolicy < ApplicationPolicy
     user
   end
 
+  def destroy?
+    update?
+  end
+
   def update_all?
     user
   end

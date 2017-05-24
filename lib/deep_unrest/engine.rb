@@ -2,6 +2,7 @@ require 'deep_unrest/authorization/base_strategy'
 require 'deep_unrest/authorization/none_strategy'
 require 'deep_unrest/authorization/pundit_strategy'
 require 'deep_unrest/concerns/null_concern'
+require 'deep_merge/rails_compat'
 
 module DeepUnrest
   class Engine < ::Rails::Engine

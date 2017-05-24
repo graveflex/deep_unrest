@@ -275,6 +275,8 @@ module DeepUnrest
                      item[:klass].update(id, action[:body])
                    when :create
                      item[:klass].create(action[:body])
+                   when :destroy
+                     item[:klass].destroy(id)
                    end
           result = { record: record }
           if action[:temp_id]
