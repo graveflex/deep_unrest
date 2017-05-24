@@ -33,11 +33,11 @@ module DeepUnrest
   end
 
   def self.to_assoc(str)
-    str.pluralize.underscore.to_sym
+    str.underscore.to_sym
   end
 
   def self.to_update_body_key(str)
-    "#{str.pluralize}Attributes".underscore.to_sym
+    "#{str}Attributes".underscore.to_sym
   end
 
   def self.get_resource(type)
