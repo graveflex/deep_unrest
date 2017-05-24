@@ -73,6 +73,15 @@ module DeepUnrest
     end
   end
 
+  def self.temp_id?(str)
+    /^\[\w+\]$/.match(str)
+  end
+
+  def self.plural?(s)
+    str = s.to_s
+    str.pluralize == str && str.singularize != str
+  end
+
   # verify that this is an actual association of the parent class.
   def self.add_parent_scope(parent, type)
     reflection = parent[:klass].reflect_on_association(to_assoc(type))
@@ -102,7 +111,6 @@ module DeepUnrest
       else
         add_parent_scope(memo[memo.size - 1], type)
       end
-    # TODO: delete this condition
     when :all
       { base: to_class(type), method: :all }
     end
@@ -175,15 +183,19 @@ module DeepUnrest
   end
 
   def self.parse_id(id_str)
-    id_match = id_str.match(/^\.(?<id>\d+)$/)
+    id_match = id_str.match(/^\.?(?<id>\d+)$/)
     id_match && id_match[:id]
   end
 
   def self.set_action(cursor, operation, type, user)
     # TODO: this is horrible. find a better way to go about this
-    action = get_scope_type(parse_path(operation[:path]).last[1],
+    id_str = parse_path(operation[:path]).last[1]
+    id = parse_id(id_str)
+    action = get_scope_type(id_str,
                             true,
                             operation[:destroy])
+
+    cursor[:id] = id || id_str
 
     case action
     when :destroy
@@ -199,8 +211,14 @@ module DeepUnrest
 
   def self.get_mutation_cursor(memo, cursor, addr, type, id, temp_id, scope_type)
     if memo
-      cursor[addr] = [{}]
-      next_cursor = cursor[addr][0]
+      record = { id: id || temp_id }
+      if plural?(type)
+        cursor[addr] = [record]
+        next_cursor = cursor[addr][0]
+      else
+        cursor[addr] = record
+        next_cursor = cursor[addr]
+      end
     else
       method = scope_type == :show ? :update : scope_type
       cursor = {}
@@ -212,16 +230,49 @@ module DeepUnrest
         klass: klass
       }
       cursor[type_sym][:operations] = {}
-      cursor[type_sym][:operations][id] = {}
-      cursor[type_sym][:operations][id][method] = {
+      cursor[type_sym][:operations][id || temp_id] = {}
+      cursor[type_sym][:operations][id || temp_id][method] = {
         method: method,
         body: body
       }
-      cursor[type_sym][:operations][id][method][:temp_id] = temp_id if temp_id
+      cursor[type_sym][:operations][id || temp_id][method][:temp_id] = temp_id if temp_id
       memo = cursor
-      next_cursor = cursor[type_sym][:operations][id][method][:body]
+      next_cursor = cursor[type_sym][:operations][id || temp_id][method][:body]
     end
     [memo, next_cursor]
+  end
+
+  def self.merge_siblings!(mutations)
+    mutations.each do |k, v|
+      case v
+      when Array
+        h = v.each_with_object({}) do |item, memo|
+          memo[item[:id]] ||= {}
+          memo[item[:id]].deeper_merge(item)
+          merge_siblings!(item)
+        end
+        mutations[k] = h.values
+      when Hash
+        merge_siblings!(v)
+      end
+    end
+    mutations
+  end
+
+  def self.remove_temp_ids!(mutations)
+    case mutations
+    when Hash
+      mutations.map do |key, val|
+        if ['id', :id].include?(key)
+          mutations.delete(key) unless parse_id(val)
+        else
+          remove_temp_ids!(val)
+        end
+      end
+    when Array
+      mutations.map { |val| remove_temp_ids!(val) }
+    end
+    mutations
   end
 
   def self.build_mutation_fragment(op, user, rest = nil, memo = nil, cursor = nil, type = nil)
@@ -263,13 +314,13 @@ module DeepUnrest
           record = case action[:method]
                    when :update_all
                      DeepUnrest.authorization_strategy
-                               .get_authorized_scope(user, item[:klass])
-                               .update(action[:body])
+                       .get_authorized_scope(user, item[:klass])
+                       .update(action[:body])
                      nil
                    when :destroy_all
                      DeepUnrest.authorization_strategy
-                               .get_authorized_scope(user, item[:klass])
-                               .destroy_all
+                       .get_authorized_scope(user, item[:klass])
+                       .destroy_all
                      nil
                    when :update
                      item[:klass].update(id, action[:body])
@@ -343,6 +394,9 @@ module DeepUnrest
     # bulid update arguments
     mutations = build_mutation_body(params, user)
 
+    merge_siblings!(mutations)
+    remove_temp_ids!(mutations)
+
     # perform update
     results = mutate(mutations, user).flatten
 
@@ -353,6 +407,7 @@ module DeepUnrest
                     .map(&:messages)
                     .reject(&:empty?)
                     .compact
+
     if errors.empty?
       temp_ids = results.map { |res| res[:temp_ids] }
                         .compact
@@ -367,3 +422,4 @@ module DeepUnrest
     raise Conflict, formatted_errors.to_json unless formatted_errors.empty?
   end
 end
+

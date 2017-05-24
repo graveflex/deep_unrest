@@ -244,8 +244,10 @@ module DeepUnrest
                         id: '2',
                         answers_attributes: [
                           {
+                            id: '[3]',
                             attachments_attributes: [
                               {
+                                id: '[4]',
                                 title: value
                               }
                             ]
@@ -284,6 +286,7 @@ module DeepUnrest
                         id: '2',
                         answers_attributes: [
                           {
+                            id: '[3]',
                             attachments_attributes: [
                               {
                                 id: '4',
@@ -343,6 +346,7 @@ module DeepUnrest
           }, {
             id: q1.id.to_s,
             answers_attributes: [{
+              id: '[1]',
               value: new_a_val
             }]
           }, {
