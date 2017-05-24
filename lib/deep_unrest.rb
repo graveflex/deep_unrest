@@ -251,7 +251,7 @@ module DeepUnrest
   end
 
   def self.build_mutation_body(ops, user)
-    ops.each_with_object({}) do |op, memo|
+    ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
       memo.deeper_merge(build_mutation_fragment(op, user))
     end
   end

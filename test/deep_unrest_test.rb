@@ -331,7 +331,7 @@ module DeepUnrest
 
         result = DeepUnrest.build_mutation_body(params, user)
 
-        expected = {
+        expected = HashWithIndifferentAccess.new(
           id: survey.id.to_s,
           name: survey_name,
           questions_attributes: [{
@@ -352,7 +352,7 @@ module DeepUnrest
               _destroy: true
             }]
           }]
-        }
+        )
 
         assert_equal Survey, result[:surveys][:klass]
         assert_equal expected, result[:surveys][:operations][survey.id.to_s][:update][:body]
