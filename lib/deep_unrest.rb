@@ -46,7 +46,7 @@ module DeepUnrest
 
   def self.get_scope_type(id, last, destroy)
     case id
-    when /^\[\w+\]$/
+    when /^\[[\w+\-]+\]$/
       :create
     when /^\.\w+$/
       if last
@@ -74,7 +74,7 @@ module DeepUnrest
   end
 
   def self.temp_id?(str)
-    /^\[\w+\]$/.match(str)
+    /^\[[\w+\-]+\]$/.match(str)
   end
 
   def self.plural?(s)
@@ -117,7 +117,7 @@ module DeepUnrest
   end
 
   def self.parse_path(path)
-    rx = /(?<type>\w+)(?<id>(?:\[|\.)[\w+\*\]]+)/
+    rx = /(?<type>\w+)(?<id>(?:\[|\.)[\w+\-\*\]]+)/
     result = path.scan(rx)
     unless result.map { |res| res.join('') }.join('.') == path
       raise InvalidPath, "Invalid path: #{path}"
@@ -341,7 +341,7 @@ module DeepUnrest
   end
 
   def self.parse_error_path(key)
-    rx = /(((^|\.)(?<type>[^\.\[]+)(?:\[(?<idx>\d+)\])\.)?(?<field>[\w\.]+)$)/
+    rx = /(((^|\.)(?<type>[^\.\[]+)(?:\[(?<idx>\d+)\])\.)?(?<field>[\w\-\.]+)$)/
     rx.match(key)
   end
 
@@ -422,4 +422,3 @@ module DeepUnrest
     raise Conflict, formatted_errors.to_json unless formatted_errors.empty?
   end
 end
-

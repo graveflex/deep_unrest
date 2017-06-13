@@ -20,7 +20,7 @@ module DeepUnrest
       test 'parses path for entities and ids' do
         match1 = DeepUnrest.parse_path('surveys.*')
         match2 = DeepUnrest.parse_path('surveys.123')
-        match3 = DeepUnrest.parse_path('surveys[123]')
+        match3 = DeepUnrest.parse_path('surveys[test-123]')
         match4 = DeepUnrest.parse_path('surveys[1].questions.*')
         match5 = DeepUnrest.parse_path('surveys.1.questions.2.answers[1]')
         match6 = DeepUnrest.parse_path('surveys.*.questions.*.answers.*')
@@ -30,7 +30,7 @@ module DeepUnrest
         assert_equal scan_to_h(match2), [{ type: 'surveys',
                                            id: '.123' }]
         assert_equal scan_to_h(match3), [{ type: 'surveys',
-                                           id: '[123]' }]
+                                           id: '[test-123]' }]
         assert_equal scan_to_h(match4), [{ type: 'surveys',
                                            id: '[1]' },
                                          { type: 'questions',

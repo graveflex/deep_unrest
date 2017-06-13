@@ -1,7 +1,6 @@
 module DeepUnrest
-  class ApplicationController < ActionController::Base
+  class ApplicationController < ActionController::API
     include DeepUnrest.authentication_concern
-    protect_from_forgery with: :null_session
 
     def context
       { current_user: current_user }
