@@ -6,16 +6,25 @@ module DeepUnrest
       { current_user: current_user }
     end
 
+
+    # multipart data will be an array-like hash
+    def format_data(data)
+      if data.respond_to? :values
+        data.values
+      else
+        data
+      end
+    end
+
     def update
       redirect = allowed_params[:redirect]
-      redirect_replace = DeepUnrest.perform_update(allowed_params[:data],
+      data = format_data(allowed_params[:data])
+      redirect_replace = DeepUnrest.perform_update(data,
                                                    current_user)
-      if redirect
-        response.headers.merge! update_auth_header
-        redirect_to redirect_replace.call(redirect)
-      else
-        render json: {}, status: 200
-      end
+      resp = {}
+      resp[:redirect] = redirect_replace.call(redirect) if redirect
+      response.headers.merge! update_auth_header
+      render json: resp, status: 200
     rescue DeepUnrest::Unauthorized => err
       render json: err.message, status: 403
     rescue DeepUnrest::UnpermittedParams => err

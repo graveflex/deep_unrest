@@ -185,10 +185,10 @@ class UpdateTest < ActionDispatch::IntegrationTest
     # new record was created
     assert_equal Answer.last.value, new_a_val
 
-    assert_response :redirect
-    follow_redirect!
-
     assert_response :success
+
+    resp_redirect = JSON.parse(response.body)['redirect']
+    assert_equal redirect, resp_redirect
   end
 
   test 'users cannot update attributes that they do not have access to' do
@@ -233,7 +233,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
     a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
 
-    body = [{ path: "#{survey_path}.#{q1_path}.answers[1]",
+    body = [{ path: survey_path,
+              attributes: { name: nil } },
+            { path: "#{survey_path}.#{q1_path}.answers[1]",
               attributes: { surveyId: survey.id,
                             value: a1_val,
                             applicantId: user.id,
@@ -260,7 +262,10 @@ class UpdateTest < ActionDispatch::IntegrationTest
                           detail: 'is invalid',
                           source: { pointer: "surveys.#{survey.id}"\
                                                       ".questions.#{q1.id}"\
-                                                      '.answers[3].value' } }]
+                                                      '.answers[3].value' } },
+                        { title: "Name can\'t be blank",
+                          detail: "can't be blank",
+                          source: { pointer: "#{survey_path}.name" } }]
 
     errors = JSON.parse(response.body)['errors'].map do |e|
       ActiveSupport::HashWithIndifferentAccess.new(e).deep_symbolize_keys
@@ -283,11 +288,13 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     survey = Survey.last
 
-    assert_response :redirect
+    redirect = JSON.parse(response.body)['redirect']
+
+    assert_response :success
     assert_equal user.uid, response['uid']
     assert response['access-token']
     assert response['client']
-    assert_redirected_to "/surveys/#{survey.id}"
+    assert_equal "/surveys/#{survey.id}", redirect
   end
 
   test 'simple destroy' do

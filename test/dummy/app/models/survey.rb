@@ -7,4 +7,6 @@ class Survey < ApplicationRecord
                                 allow_destroy: true
   accepts_nested_attributes_for :answers,
                                 allow_destroy: true
+
+  validates_presence_of :name
 end

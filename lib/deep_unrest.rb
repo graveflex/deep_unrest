@@ -384,6 +384,20 @@ module DeepUnrest
     end
   end
 
+  def self.format_error_keys(res, i)
+    record = res[:record]
+    errors = record&.errors&.messages
+    if errors
+      base_key = "#{record.class.to_s.underscore.pluralize}[#{i}]"
+      errors.keys.map do |attr|
+        if record.respond_to? attr
+          errors["#{base_key}.#{attr}".to_sym] = errors.delete(attr)
+        end
+      end
+    end
+    errors
+  end
+
   def self.perform_update(params, user)
     # identify requested scope(s)
     scopes = collect_all_scopes(params)
@@ -401,10 +415,9 @@ module DeepUnrest
     results = mutate(mutations, user).flatten
 
     # check results for errors
-    errors = results.map { |res| res[:record] }
+    errors = results.each_with_index
+                    .map { |res, i| format_error_keys(res, i) }
                     .compact
-                    .map(&:errors)
-                    .map(&:messages)
                     .reject(&:empty?)
                     .compact
 
