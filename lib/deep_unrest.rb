@@ -388,7 +388,7 @@ module DeepUnrest
     record = res[:record]
     errors = record&.errors&.messages
     if errors
-      base_key = "#{record.class.to_s.underscore.pluralize}[#{i}]"
+      base_key = "#{record.class.to_s.camelize(:lower).pluralize}[#{i}]"
       errors.keys.map do |attr|
         if record.respond_to? attr
           errors["#{base_key}.#{attr}".to_sym] = errors.delete(attr)
