@@ -6,19 +6,25 @@ module DeepUnrest
       { current_user: current_user }
     end
 
-
-    # multipart data will be an array-like hash
-    def format_data(data)
-      if data.respond_to? :values
-        data.values
-      else
-        data
+    # rails can't deal with array indices in params (converts them to hashes)
+    # see https://gist.github.com/bloudermilk/2884947
+    def repair_nested_params(obj)
+      obj.each do |key, value|
+        if value.is_a?(ActionController::Parameters) || value.is_a?(Hash)
+          # If any non-integer keys
+          if value.keys.find { |k, _| k =~ /\D/ }
+            repair_nested_params(value)
+          else
+            obj[key] = value.values
+            value.values.each { |h| repair_nested_params(h) }
+          end
+        end
       end
     end
 
     def update
       redirect = allowed_params[:redirect]
-      data = format_data(allowed_params[:data])
+      data = repair_nested_params(allowed_params[:data])
       redirect_replace = DeepUnrest.perform_update(data,
                                                    current_user)
       resp = {}
