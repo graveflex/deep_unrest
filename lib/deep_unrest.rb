@@ -352,7 +352,7 @@ module DeepUnrest
         base_path = operation[:error_path] || operation[:path]
         { title: "#{path_info[:field].humanize} #{msg}",
           detail: msg,
-          source: { pointer: "#{base_path}.#{path_info[:field]}" } }
+          source: { pointer: "#{base_path}.#{path_info[:field].camelize(:lower)}" } }
       end
     end
     values.map do |msg|
