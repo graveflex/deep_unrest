@@ -200,7 +200,7 @@ module DeepUnrest
         memo[key] << id
       end
 
-      "#{type}[#{idx}]"
+      "#{type.underscore}[#{idx}]"
     end.compact.join('.')
   end
 
