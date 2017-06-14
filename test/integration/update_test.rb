@@ -257,15 +257,27 @@ class UpdateTest < ActionDispatch::IntegrationTest
                           detail: 'is invalid',
                           source: { pointer: "surveys.#{survey.id}"\
                                              ".questions.#{q1.id}"\
-                                             '.answers[1].value' } },
+                                             '.answers[1].value',
+                                    deepUnrestPath: "surveys.#{survey.id}"\
+                                                    ".questions.#{q1.id}"\
+                                                    '.answers[1].value',
+                                    activeRecordPath: 'questions[0]'\
+                                                      '.answers[0].value' } },
                         { title: 'Value is invalid',
                           detail: 'is invalid',
                           source: { pointer: "surveys.#{survey.id}"\
-                                                      ".questions.#{q1.id}"\
-                                                      '.answers[3].value' } },
+                                             ".questions.#{q1.id}"\
+                                             '.answers[3].value',
+                                    deepUnrestPath: "surveys.#{survey.id}"\
+                                                    ".questions.#{q1.id}"\
+                                                    '.answers[3].value',
+                                    activeRecordPath: 'questions[0]'\
+                                                      '.answers[2].value' } },
                         { title: "Name can\'t be blank",
                           detail: "can't be blank",
-                          source: { pointer: "#{survey_path}.name" } }]
+                          source: { pointer: "#{survey_path}.name",
+                                    deepUnrestPath: "#{survey_path}.name",
+                                    activeRecordPath: 'name' } }]
 
     errors = JSON.parse(response.body)['errors'].map do |e|
       ActiveSupport::HashWithIndifferentAccess.new(e).deep_symbolize_keys
@@ -281,6 +293,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
     q1_path = "questions.#{q1.id}"
+    q2 = questions(:two)
+    q2_path = "questions.#{q2.id}"
     a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
     a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
     survey_error_path = Faker::Lorem.word
@@ -301,7 +315,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
                             value: Faker::TwinPeaks.quote,
                             applicantId: user.id,
                             questionId: q1.id } },
-            { path: "#{survey_path}.#{q1_path}.answers[3]",
+            { path: "#{survey_path}.#{q2_path}.answers[3]",
               errorPath: answer_3_error_path,
               attributes: { surveyId: survey.id,
                             value: a2_val,
@@ -312,13 +326,26 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     expected_results = [{ title: 'Value is invalid',
                           detail: 'is invalid',
-                          source: { pointer: "#{answer_1_error_path}.value" } },
+                          source: { pointer: "#{answer_1_error_path}.value",
+                                    deepUnrestPath: "#{survey_path}."\
+                                                    "#{q1_path}."\
+                                                    'answers[1].value',
+                                    activeRecordPath: 'questions[0].'\
+                                                      'answers[0].value' } },
                         { title: 'Value is invalid',
                           detail: 'is invalid',
-                          source: { pointer: "#{answer_3_error_path}.value" } },
+                          source: { pointer: "#{answer_3_error_path}.value",
+                                    deepUnrestPath: "#{survey_path}."\
+                                                    "#{q2_path}."\
+                                                    'answers[3].value',
+                                    activeRecordPath: 'questions[1].'\
+                                                      'answers[0].value' } },
+
                         { title: "Name can\'t be blank",
                           detail: "can't be blank",
-                          source: { pointer: "#{survey_error_path}.name" } }]
+                          source: { pointer: "#{survey_error_path}.name",
+                                    deepUnrestPath: "#{survey_path}.name",
+                                    activeRecordPath: 'name' } }]
 
     errors = JSON.parse(response.body)['errors'].map do |e|
       ActiveSupport::HashWithIndifferentAccess.new(e).deep_symbolize_keys

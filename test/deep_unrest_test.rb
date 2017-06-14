@@ -63,11 +63,11 @@ module DeepUnrest
         match2 = DeepUnrest.parse_error_path('surveys[1].questions[2].baz')
         match3 = DeepUnrest.parse_error_path('surveys[1].qs[2].answers[1].val')
 
-        assert_equal({ type: 'surveys', idx: '0', field: 'name' },
+        assert_equal({ path: 'surveys[0]', field: 'name' },
                      match_to_h(match1))
-        assert_equal({ type: 'questions', idx: '2', field: 'baz' },
+        assert_equal({ path: 'surveys[1].questions[2]', field: 'baz' },
                      match_to_h(match2))
-        assert_equal({ type: 'answers', idx: '1', field: 'val' },
+        assert_equal({ path: 'surveys[1].qs[2].answers[1]', field: 'val' },
                      match_to_h(match3))
       end
     end
@@ -230,12 +230,14 @@ module DeepUnrest
         path = 'surveys.1.questions.2.answers[3].attachments[4]'
         action = :update
         value = Faker::TwinPeaks.quote
-        body_part = DeepUnrest.build_mutation_fragment({ path: path,
-                                                         attributes: {
-                                                           title: value
-                                                         },
-                                                         action: action },
-                                                       user)
+        params = [{ path: path,
+                    attributes: { title: value },
+                    action: action }]
+        scopes = DeepUnrest.collect_all_scopes(params)
+        body_part = DeepUnrest.build_mutation_fragment(params.first,
+                                                       scopes,
+                                                       user,
+                                                       {})
 
         expected = {
           surveys: {
@@ -275,9 +277,14 @@ module DeepUnrest
       test 'marks fragments to be destroyed' do
         user = applicants(:one)
         path = 'surveys.1.questions.2.answers[3].attachments.4'
-        body_part = DeepUnrest.build_mutation_fragment({ path: path,
-                                                         destroy: true },
-                                                       user)
+
+        params = [{ path: path,
+                    destroy: true }]
+        scopes = DeepUnrest.collect_all_scopes(params)
+        body_part = DeepUnrest.build_mutation_fragment(params.first,
+                                                       scopes,
+                                                       user,
+                                                       {})
 
         expected = {
           surveys: {
@@ -339,7 +346,9 @@ module DeepUnrest
                   { destroy: true,
                     path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
-        result = DeepUnrest.build_mutation_body(params, user)
+        scopes = DeepUnrest.collect_all_scopes(params)
+
+        result = DeepUnrest.build_mutation_body(params, scopes, user)
 
         expected = HashWithIndifferentAccess.new(
           id: survey.id.to_s,

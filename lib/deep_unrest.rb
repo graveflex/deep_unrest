@@ -188,15 +188,39 @@ module DeepUnrest
     id_match && id_match[:id]
   end
 
-  def self.set_action(cursor, operation, type, user)
+  def self.increment_error_indices(path_info, memo)
+    path_info.each_with_index.map do |(type, id), i|
+      next if i.zero?
+      parent_type, parent_id = path_info[i - 1]
+      key = "#{parent_type}#{parent_id}"
+      memo[key] = [] unless memo[key]
+      idx = memo[key].find_index(id)
+      unless idx
+        idx = memo[key].size
+        memo[key] << id
+      end
+
+      "#{type}[#{idx}]"
+    end.compact.join('.')
+  end
+
+  def self.set_action(cursor, operation, type, user, scopes, err_path_memo)
     # TODO: this is horrible. find a better way to go about this
-    id_str = parse_path(operation[:path]).last[1]
+    path_info = parse_path(operation[:path])
+    id_str = path_info.last[1]
     id = parse_id(id_str)
     action = get_scope_type(id_str,
                             true,
                             operation[:destroy])
 
     cursor[:id] = id || id_str
+
+    scope = scopes.find do |s|
+      s[:type] == type && s[:id] == id_str
+    end
+
+    scope[:ar_error_key] = increment_error_indices(path_info, err_path_memo)
+    scope[:dr_error_key] = path_info.map {|pair| pair.join('') }.join('.')
 
     case action
     when :destroy
@@ -207,6 +231,7 @@ module DeepUnrest
                                      operation[:attributes],
                                      user)
     end
+
     cursor
   end
 
@@ -276,11 +301,11 @@ module DeepUnrest
     mutations
   end
 
-  def self.build_mutation_fragment(op, user, rest = nil, memo = nil, cursor = nil, type = nil)
+  def self.build_mutation_fragment(op, scopes, user, err_path_memo, rest = nil, memo = nil, cursor = nil, type = nil)
     rest ||= parse_path(op[:path])
 
     if rest.empty?
-      set_action(cursor, op, type, user)
+      set_action(cursor, op, type, user, scopes, err_path_memo)
       return memo
     end
 
@@ -299,12 +324,13 @@ module DeepUnrest
                                             scope_type)
 
     next_cursor[:id] = id if id
-    build_mutation_fragment(op, user, rest, memo, next_cursor, type)
+    build_mutation_fragment(op, scopes, user, err_path_memo, rest, memo, next_cursor, type)
   end
 
-  def self.build_mutation_body(ops, user)
+  def self.build_mutation_body(ops, scopes, user)
+    err_path_memo = {}
     ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
-      memo.deeper_merge(build_mutation_fragment(op, user))
+      memo.deeper_merge(build_mutation_fragment(op, scopes, user, err_path_memo))
     end
   end
 
@@ -342,17 +368,30 @@ module DeepUnrest
   end
 
   def self.parse_error_path(key)
-    rx = /(((^|\.)(?<type>[^\.\[]+)(?:\[(?<idx>\d+)\])\.)?(?<field>[\w\-\.]+)$)/
+    rx = /^(?<path>.*\])?\.?(?<field>[\w\-\.]+)$/
     rx.match(key)
   end
 
   def self.format_errors(operation, path_info, values)
     if operation
       return values.map do |msg|
-        base_path = operation[:error_path] || operation[:path]
+        base_path = (
+          operation[:error_path] ||
+          operation[:dr_error_key] ||
+          operation[:ar_error_key]
+        )
+        # TODO: case field name according to jsonapi_resources settings
+        field_name = path_info[:field].camelize(:lower)
+        pointer = [base_path, field_name].compact.join('.')
+        active_record_path = [operation[:ar_error_key],
+                              field_name].reject(&:empty?).compact.join('.')
+        deep_unrest_path = [operation[:dr_error_key],
+                            field_name].compact.join('.')
         { title: "#{path_info[:field].humanize} #{msg}",
           detail: msg,
-          source: { pointer: "#{base_path}.#{path_info[:field].camelize(:lower)}" } }
+          source: { pointer: pointer,
+                    deepUnrestPath: deep_unrest_path,
+                    activeRecordPath: active_record_path } }
       end
     end
     values.map do |msg|
@@ -365,10 +404,12 @@ module DeepUnrest
       errors.map do |key, values|
         path_info = parse_error_path(key.to_s)
         operation = scopes.find do |s|
-          (s[:type] == path_info[:type].camelize(:lower) &&
-           s[:index] == path_info[:idx].to_i)
+          (
+            s[:ar_error_key] &&
+            s[:ar_error_key] == (path_info[:path] || '') &&
+            s[:scope_type] != :show
+          )
         end
-
         format_errors(operation, path_info, values)
       end
     end.flatten
@@ -387,16 +428,9 @@ module DeepUnrest
     end
   end
 
-  def self.format_error_keys(res, i)
+  def self.format_error_keys(res)
     record = res[:record]
-    errors = record&.errors&.messages
-    if errors
-      base_key = "#{record.class.to_s.camelize(:lower).pluralize}[#{i}]"
-      errors.keys.map do |attr|
-        errors["#{base_key}.#{attr}".to_sym] = errors.delete(attr)
-      end
-    end
-    errors
+    record&.errors&.messages
   end
 
   def self.perform_update(params, user)
@@ -407,7 +441,7 @@ module DeepUnrest
     DeepUnrest.authorization_strategy.authorize(scopes, user).flatten
 
     # bulid update arguments
-    mutations = build_mutation_body(params, user)
+    mutations = build_mutation_body(params, scopes, user)
 
     merge_siblings!(mutations)
     remove_temp_ids!(mutations)
@@ -416,8 +450,7 @@ module DeepUnrest
     results = mutate(mutations, user).flatten
 
     # check results for errors
-    errors = results.each_with_index
-                    .map { |res, i| format_error_keys(res, i) }
+    errors = results.map { |res| format_error_keys(res) }
                     .compact
                     .reject(&:empty?)
                     .compact

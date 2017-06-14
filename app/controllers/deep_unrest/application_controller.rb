@@ -29,7 +29,6 @@ module DeepUnrest
                                                    current_user)
       resp = {}
       resp[:redirect] = redirect_replace.call(redirect) if redirect
-      response.headers.merge! update_auth_header
       render json: resp, status: 200
     rescue DeepUnrest::Unauthorized => err
       render json: err.message, status: 403
@@ -37,6 +36,8 @@ module DeepUnrest
       render json: err.message, status: 405
     rescue DeepUnrest::Conflict => err
       render json: err.message, status: 409
+    ensure
+      response.headers.merge! update_auth_header
     end
 
     def current_user
