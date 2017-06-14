@@ -363,7 +363,8 @@ module DeepUnrest
       errors.map do |key, values|
         path_info = parse_error_path(key.to_s)
         operation = scopes.find do |s|
-          s[:type] == path_info[:type] && s[:index] == path_info[:idx].to_i
+          (s[:type] == path_info[:type].camelize(:lower) &&
+           s[:index] == path_info[:idx].to_i)
         end
 
         format_errors(operation, path_info, values)
