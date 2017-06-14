@@ -275,6 +275,59 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_equal expected_results, errors
   end
 
+  test 'validation errors can use paths defined by clients' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+    q1 = questions(:one)
+    q1_path = "questions.#{q1.id}"
+    a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    survey_error_path = Faker::Lorem.word
+    answer_1_error_path = Faker::Lorem.word
+    answer_3_error_path = Faker::Lorem.word
+
+    body = [{ path: survey_path,
+              errorPath: survey_error_path,
+              attributes: { name: nil } },
+            { path: "#{survey_path}.#{q1_path}.answers[1]",
+              errorPath: answer_1_error_path,
+              attributes: { surveyId: survey.id,
+                            value: a1_val,
+                            applicantId: user.id,
+                            questionId: q1.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[2]",
+              attributes: { surveyId: survey.id,
+                            value: Faker::TwinPeaks.quote,
+                            applicantId: user.id,
+                            questionId: q1.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[3]",
+              errorPath: answer_3_error_path,
+              attributes: { surveyId: survey.id,
+                            value: a2_val,
+                            applicantId: user.id,
+                            questionId: q1.id } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+
+    expected_results = [{ title: 'Value is invalid',
+                          detail: 'is invalid',
+                          source: { pointer: "#{answer_1_error_path}.value" } },
+                        { title: 'Value is invalid',
+                          detail: 'is invalid',
+                          source: { pointer: "#{answer_3_error_path}.value" } },
+                        { title: "Name can\'t be blank",
+                          detail: "can't be blank",
+                          source: { pointer: "#{survey_error_path}.name" } }]
+
+    errors = JSON.parse(response.body)['errors'].map do |e|
+      ActiveSupport::HashWithIndifferentAccess.new(e).deep_symbolize_keys
+    end
+
+    assert_response 409
+    assert_equal expected_results, errors
+  end
+
   test 'replaces temp_ids in redirects with new actual ids' do
     user = applicants(:one)
 

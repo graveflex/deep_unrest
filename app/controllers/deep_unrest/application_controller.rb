@@ -47,6 +47,7 @@ module DeepUnrest
       params.permit(:redirect,
                     data: [:destroy,
                            :path,
+                           :errorPath,
                            { attributes: {} }])
     end
   end

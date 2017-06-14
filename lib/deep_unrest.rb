@@ -162,6 +162,7 @@ module DeepUnrest
                   scope_type: scope_type,
                   scope: scope,
                   klass: to_class(type),
+                  error_path: operation[:errorPath],
                   id: id }
 
       context[:path] = operation[:path] unless scope_type == :show
@@ -348,9 +349,10 @@ module DeepUnrest
   def self.format_errors(operation, path_info, values)
     if operation
       return values.map do |msg|
+        base_path = operation[:error_path] || operation[:path]
         { title: "#{path_info[:field].humanize} #{msg}",
           detail: msg,
-          source: { pointer: "#{operation[:path]}.#{path_info[:field]}" } }
+          source: { pointer: "#{base_path}.#{path_info[:field]}" } }
       end
     end
     values.map do |msg|
