@@ -2,6 +2,23 @@
 
 require 'deep_unrest/engine'
 
+# workaronud for rails bug with association indices.
+# see https://github.com/rails/rails/pull/24728
+module ActiveRecord
+  module AutosaveAssociation
+    # Returns the record for an association collection that should be validated
+    # or saved. If +autosave+ is +false+ only new records will be returned,
+    # unless the parent is/was a new record itself.
+    def associated_records_to_validate_or_save(association, new_record, autosave)
+      if new_record || autosave
+        association && association.target
+      else
+        association.target.find_all(&:new_record?)
+      end
+    end
+  end
+end
+
 # Update deeply nested associations wholesale
 module DeepUnrest
   class InvalidParentScope < ::StandardError
