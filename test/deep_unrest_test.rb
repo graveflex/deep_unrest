@@ -57,11 +57,12 @@ module DeepUnrest
     end
 
     class ParseErrorInfo < ActiveSupport::TestCase
-      # TODO: test for top level resource errors (non-field related)
       test 'parses error key to correlate with operation path' do
         match1 = DeepUnrest.parse_error_path('surveys[0].name')
         match2 = DeepUnrest.parse_error_path('surveys[1].questions[2].baz')
         match3 = DeepUnrest.parse_error_path('surveys[1].qs[2].answers[1].val')
+        match4 = DeepUnrest.parse_error_path('surveys[1].nested.val')
+        match5 = DeepUnrest.parse_error_path('nested.val')
 
         assert_equal({ path: 'surveys[0]', field: 'name' },
                      match_to_h(match1))
@@ -69,6 +70,10 @@ module DeepUnrest
                      match_to_h(match2))
         assert_equal({ path: 'surveys[1].qs[2].answers[1]', field: 'val' },
                      match_to_h(match3))
+        assert_equal({ path: 'surveys[1]', field: 'nested.val' },
+                     match_to_h(match4))
+        assert_equal({ path: nil, field: 'nested.val' },
+                     match_to_h(match5))
       end
     end
 
@@ -262,6 +267,49 @@ module DeepUnrest
                             ]
                           }
                         ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        assert_equal expected, body_part
+      end
+
+      test 'does not treat normal arrays as nested resources' do
+        user = admins(:one)
+        path = 'surveys.1.questions.2'
+        action = :update
+        content = Faker::TwinPeaks.quote
+        options = [Faker::TwinPeaks.location,
+                   Faker::TwinPeaks.location]
+        params = [{ path: path,
+                    attributes: { content: content,
+                                  options: options },
+                    action: action }]
+        scopes = DeepUnrest.collect_all_scopes(params)
+        body_part = DeepUnrest.build_mutation_fragment(params.first,
+                                                       scopes,
+                                                       user,
+                                                       {})
+
+        expected = {
+          surveys: {
+            klass: Survey,
+            operations: {
+              '1' => {
+                update: {
+                  method: :update,
+                  body: {
+                    id: '1',
+                    questions_attributes: [
+                      {
+                        id: '2',
+                        options: options,
+                        content: content
                       }
                     ]
                   }

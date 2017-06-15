@@ -5,11 +5,14 @@ require 'deep_unrest/engine'
 # workaronud for rails bug with association indices.
 # see https://github.com/rails/rails/pull/24728
 module ActiveRecord
+  # monkey-patch
   module AutosaveAssociation
     # Returns the record for an association collection that should be validated
     # or saved. If +autosave+ is +false+ only new records will be returned,
     # unless the parent is/was a new record itself.
-    def associated_records_to_validate_or_save(association, new_record, autosave)
+    def associated_records_to_validate_or_save(association,
+                                               new_record,
+                                               autosave)
       if new_record || autosave
         association && association.target
       else
@@ -290,9 +293,16 @@ module DeepUnrest
       case v
       when Array
         h = v.each_with_object({}) do |item, memo|
-          memo[item[:id]] ||= {}
-          memo[item[:id]].deeper_merge(item)
-          merge_siblings!(item)
+          if item.respond_to?(:key?) && item.key?(:id)
+            # this is a nested resource. merge as such
+            memo[item[:id]] ||= {}
+            memo[item[:id]].deeper_merge(item)
+            merge_siblings!(item)
+          else
+            # otherwise this is just a normal array
+            idx = memo.keys.size
+            memo[idx] = item
+          end
         end
         mutations[k] = h.values
       when Hash

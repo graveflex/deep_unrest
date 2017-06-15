@@ -1,6 +1,7 @@
 class QuestionResource < BaseResource
   attributes :content,
-             :survey_id
+             :survey_id,
+             :options
 
   has_many :answers
 
