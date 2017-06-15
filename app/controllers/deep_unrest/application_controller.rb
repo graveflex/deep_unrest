@@ -24,7 +24,7 @@ module DeepUnrest
 
     def update
       redirect = allowed_params[:redirect]
-      data = repair_nested_params(allowed_params[:data])
+      data = repair_nested_params(allowed_params)[:data]
       redirect_replace = DeepUnrest.perform_update(data,
                                                    current_user)
       resp = {}
@@ -36,8 +36,6 @@ module DeepUnrest
       render json: err.message, status: 405
     rescue DeepUnrest::Conflict => err
       render json: err.message, status: 409
-    ensure
-      response.headers.merge! update_auth_header
     end
 
     def current_user

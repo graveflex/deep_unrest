@@ -371,9 +371,6 @@ class UpdateTest < ActionDispatch::IntegrationTest
     redirect = JSON.parse(response.body)['redirect']
 
     assert_response :success
-    assert_equal user.uid, response['uid']
-    assert response['access-token']
-    assert response['client']
     assert_equal "/surveys/#{survey.id}", redirect
   end
 
