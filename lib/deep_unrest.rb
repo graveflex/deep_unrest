@@ -245,6 +245,7 @@ module DeepUnrest
     case action
     when :destroy
       cursor[:_destroy] = true
+      scope[:destroyed] = true
     when :update, :create, :update_all
       cursor.merge! parse_attributes(type,
                                      operation[:action],
@@ -486,7 +487,16 @@ module DeepUnrest
       temp_ids = results.map { |res| res[:temp_ids] }
                         .compact
                         .each_with_object({}) { |item, mem| mem.merge!(item) }
-      return build_redirect_regex(temp_ids)
+
+      return {
+        redirect_regex: build_redirect_regex(temp_ids),
+        destroyed: scopes.select { |item| item[:destroyed] }
+                         .map do |item|
+                           { type: item[:type],
+                             id: parse_id(item[:id]),
+                             destroyed: true }
+                         end
+      }
     end
 
     # map errors to their sources

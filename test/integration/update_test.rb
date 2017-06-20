@@ -383,7 +383,13 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     assert_difference 'Survey.count', -1 do
       patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+
+      # should return a list of all destroyed resources
+      resp = JSON.parse(response.body)
+      assert_equal 'surveys', resp['destroyed'][0]['type']
+      assert_equal survey.id.to_s, resp['destroyed'][0]['id']
     end
+
 
     assert_raises ActiveRecord::RecordNotFound do
       survey.reload

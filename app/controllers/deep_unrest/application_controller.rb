@@ -26,10 +26,9 @@ module DeepUnrest
     def update
       redirect = allowed_params[:redirect]
       data = repair_nested_params(allowed_params)[:data]
-      redirect_replace = DeepUnrest.perform_update(data,
-                                                   current_user)
-      resp = {}
-      resp[:redirect] = redirect_replace.call(redirect) if redirect
+      results = DeepUnrest.perform_update(data, current_user)
+      resp = { destroyed: results[:destroyed] }
+      resp[:redirect] = results[:redirect_regex].call(redirect) if redirect
       render json: resp, status: 200
     rescue DeepUnrest::Unauthorized => err
       render json: err.message, status: 403
