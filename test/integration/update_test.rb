@@ -295,30 +295,48 @@ class UpdateTest < ActionDispatch::IntegrationTest
     q1_path = "questions.#{q1.id}"
     q2 = questions(:two)
     q2_path = "questions.#{q2.id}"
-    a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a0_val = Faker::TwinPeaks.quote
+    a1_val = Faker::TwinPeaks.quote
     a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a3_val = Faker::TwinPeaks.quote
+    a4_val = "XXXXX#{Faker::TwinPeaks.quote}"
     survey_error_path = Faker::Lorem.word
-    answer_1_error_path = Faker::Lorem.word
-    answer_3_error_path = Faker::Lorem.word
+    answer_0_error_path = 'answer_0_error_path'
+    answer_1_error_path = 'answer_1_error_path'
+    answer_2_error_path = 'answer_2_error_path'
+    answer_4_error_path = 'answer_4_error_path'
 
     body = [{ path: survey_path,
               errorPath: survey_error_path,
               attributes: { name: nil } },
+            { path: "#{survey_path}.#{q1_path}.answers[0]",
+              errorPath: answer_0_error_path,
+              attributes: { surveyId: survey.id,
+                            value: a0_val,
+                            applicantId: user.id,
+                            questionId: q1.id } },
             { path: "#{survey_path}.#{q1_path}.answers[1]",
+              destroy: true,
               errorPath: answer_1_error_path,
               attributes: { surveyId: survey.id,
                             value: a1_val,
                             applicantId: user.id,
                             questionId: q1.id } },
             { path: "#{survey_path}.#{q1_path}.answers[2]",
-              attributes: { surveyId: survey.id,
-                            value: Faker::TwinPeaks.quote,
-                            applicantId: user.id,
-                            questionId: q1.id } },
-            { path: "#{survey_path}.#{q2_path}.answers[3]",
-              errorPath: answer_3_error_path,
+              errorPath: answer_2_error_path,
               attributes: { surveyId: survey.id,
                             value: a2_val,
+                            applicantId: user.id,
+                            questionId: q1.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[3]",
+              attributes: { surveyId: survey.id,
+                            value: a3_val,
+                            applicantId: user.id,
+                            questionId: q1.id } },
+            { path: "#{survey_path}.#{q2_path}.answers[4]",
+              errorPath: answer_4_error_path,
+              attributes: { surveyId: survey.id,
+                            value: a4_val,
                             applicantId: user.id,
                             questionId: q1.id } }]
 
@@ -326,18 +344,18 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     expected_results = [{ title: 'Value is invalid',
                           detail: 'is invalid',
-                          source: { pointer: "#{answer_1_error_path}.value",
+                          source: { pointer: "#{answer_2_error_path}.value",
                                     deepUnrestPath: "#{survey_path}."\
                                                     "#{q1_path}."\
-                                                    'answers[1].value',
+                                                    'answers[2].value',
                                     activeRecordPath: 'questions[0].'\
-                                                      'answers[0].value' } },
+                                                      'answers[1].value' } },
                         { title: 'Value is invalid',
                           detail: 'is invalid',
-                          source: { pointer: "#{answer_3_error_path}.value",
+                          source: { pointer: "#{answer_4_error_path}.value",
                                     deepUnrestPath: "#{survey_path}."\
                                                     "#{q2_path}."\
-                                                    'answers[3].value',
+                                                    'answers[4].value',
                                     activeRecordPath: 'questions[1].'\
                                                       'answers[0].value' } },
 

@@ -94,7 +94,7 @@ module DeepUnrest
   end
 
   def self.temp_id?(str)
-    /^\[[\w+\-]+\]$/.match(str)
+    /\[[\w+\-]+\]$/.match(str)
   end
 
   def self.plural?(s)
