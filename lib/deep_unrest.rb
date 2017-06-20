@@ -70,7 +70,7 @@ module DeepUnrest
       :create
     when /^\.\w+$/
       if last
-        if destroy
+        if destroy.present?
           :destroy
         else
           :update
@@ -80,7 +80,7 @@ module DeepUnrest
       end
     when /^\.\*$/
       if last
-        if destroy
+        if destroy.present?
           :destroy_all
         else
           :update_all
