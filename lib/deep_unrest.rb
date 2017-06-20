@@ -462,14 +462,19 @@ module DeepUnrest
   end
 
   def self.perform_update(params, user)
+    # reject new resources marked for destruction
+    viable_params = params.reject do |param|
+      temp_id?(param[:path]) && param[:destroy]
+    end
+
     # identify requested scope(s)
-    scopes = collect_all_scopes(params)
+    scopes = collect_all_scopes(viable_params)
 
     # authorize user for requested scope(s)
     DeepUnrest.authorization_strategy.authorize(scopes, user).flatten
 
     # bulid update arguments
-    mutations = build_mutation_body(params, scopes, user)
+    mutations = build_mutation_body(viable_params, scopes, user)
 
     merge_siblings!(mutations)
     remove_temp_ids!(mutations)

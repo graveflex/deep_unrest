@@ -395,4 +395,16 @@ class UpdateTest < ActionDispatch::IntegrationTest
       survey.reload
     end
   end
+
+  test 'should not create items marked for destruction' do
+    user = applicants(:one)
+
+    body = [{ path: "surveys[1]",
+              attributes: { name: 'test' },
+              destroy: true }]
+
+    assert_no_difference 'Survey.count' do
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+    end
+  end
 end
