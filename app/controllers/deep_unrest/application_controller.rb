@@ -9,6 +9,7 @@ module DeepUnrest
     # rails can't deal with array indices in params (converts them to hashes)
     # see https://gist.github.com/bloudermilk/2884947
     def repair_nested_params(obj)
+      return unless obj.respond_to?(:each)
       obj.each do |key, value|
         if value.is_a?(ActionController::Parameters) || value.is_a?(Hash)
           # If any non-integer keys
