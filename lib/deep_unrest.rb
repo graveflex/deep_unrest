@@ -464,7 +464,7 @@ module DeepUnrest
   def self.perform_update(params, user)
     # reject new resources marked for destruction
     viable_params = params.reject do |param|
-      temp_id?(param[:path]) && param[:destroy]
+      temp_id?(param[:path]) && param[:destroy].present?
     end
 
     # identify requested scope(s)
