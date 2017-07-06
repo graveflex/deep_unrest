@@ -400,6 +400,15 @@ module DeepUnrest
     rx.match(key)
   end
 
+  # handle error titles in cases where error value is an array
+  def self.format_error_title(title)
+    if title.is_a?(Array)
+      title.join(', ')
+    else
+      title
+    end
+  end
+
   def self.format_errors(operation, path_info, values)
     if operation
       return values.map do |msg|
@@ -415,7 +424,7 @@ module DeepUnrest
                               field_name].reject(&:empty?).compact.join('.')
         deep_unrest_path = [operation[:dr_error_key],
                             field_name].compact.join('.')
-        { title: "#{path_info[:field].humanize} #{msg}",
+        { title: "#{path_info[:field].humanize} #{format_error_title(msg)}",
           detail: msg,
           source: { pointer: pointer,
                     deepUnrestPath: deep_unrest_path,
