@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class UpdateTest < ActionDispatch::IntegrationTest
@@ -34,6 +36,50 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_response 403
     assert_equal expected_error, JSON.parse(response.body)[0]['title']
     assert_equal survey_path, JSON.parse(response.body)[0]['source']['pointer']
+  end
+
+  test 'temp_ids are mapped to the ids of the created resources' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    q1 = questions(:one)
+    q1_path = "questions.#{q1.id}"
+    q2 = questions(:two)
+    q2_path = "questions.#{q2.id}"
+    a1_val = Faker::TwinPeaks.quote
+    a2_val = Faker::TwinPeaks.quote
+    a3_val = Faker::TwinPeaks.quote
+
+    survey_path = "surveys.#{survey.id}"
+
+    body = [{ path: "#{survey_path}.#{q1_path}.answers[answer1]",
+              attributes: { value: a1_val,
+                            applicantId: user.id,
+                            surveyId: survey.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[answer2]",
+              attributes: { value: a2_val,
+                            applicantId: user.id,
+                            surveyId: survey.id } },
+            { path: "#{survey_path}.#{q2_path}.answers[answer3]",
+              attributes: { value: a3_val,
+                            applicantId: user.id,
+                            surveyId: survey.id } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+
+    assert_response 200
+
+    temp_ids = JSON.parse(response.body)['tempIds']
+
+    temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
+      '@@temp_ids'
+    )
+
+    assert_equal a1_val, Answer.find(temp_ids['[answer1]']).value
+    assert_equal a2_val, Answer.find(temp_ids['[answer2]']).value
+    assert_equal a3_val, Answer.find(temp_ids['[answer3]']).value
+
+    # ensure temp_id_map was cleared
+    assert_equal temp_id_map, {}
   end
 
   test 'authorized users can make bulk updates to resources' do
@@ -122,7 +168,6 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_response 405
     assert_equal expected_error, err
   end
-
 
   test 'users can only batch update resources within their scope' do
     user = applicants(:one)
@@ -283,8 +328,15 @@ class UpdateTest < ActionDispatch::IntegrationTest
       ActiveSupport::HashWithIndifferentAccess.new(e).deep_symbolize_keys
     end
 
+    temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
+      '@@temp_ids'
+    )
+
     assert_response 409
     assert_equal expected_results, errors
+
+    # ensure temp id map is cleared when errors are thrown
+    assert_equal temp_id_map, {}
   end
 
   test 'validation errors can use paths defined by clients' do
@@ -375,9 +427,10 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
   test 'replaces temp_ids in redirects with new actual ids' do
     user = applicants(:one)
+    name = Faker::TwinPeaks.quote
 
     body = [{ path: 'surveys[1]',
-              attributes: { name: Faker::TwinPeaks.quote,
+              attributes: { name: name,
                             applicantId: user.id } }]
 
     patch '/deep_unrest/update', auth_xhr_req({ data: body,
@@ -386,10 +439,13 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
     survey = Survey.last
 
-    redirect = JSON.parse(response.body)['redirect']
+    resp = JSON.parse(response.body)
+    redirect = resp['redirect']
+    new_id = resp['tempIds']['[1]']
 
     assert_response :success
     assert_equal "/surveys/#{survey.id}", redirect
+    assert_equal name, Survey.find(new_id).name
   end
 
   test 'simple destroy' do
@@ -408,7 +464,6 @@ class UpdateTest < ActionDispatch::IntegrationTest
       assert_equal survey.id.to_s, resp['destroyed'][0]['id']
     end
 
-
     assert_raises ActiveRecord::RecordNotFound do
       survey.reload
     end
@@ -417,7 +472,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
   test 'should not create items marked for destruction' do
     user = applicants(:one)
 
-    body = [{ path: "surveys[1]",
+    body = [{ path: 'surveys[1]',
               attributes: { name: 'test' },
               destroy: true }]
 

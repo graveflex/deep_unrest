@@ -240,7 +240,7 @@ module DeepUnrest
     end
 
     scope[:ar_error_key] = increment_error_indices(path_info, err_path_memo)
-    scope[:dr_error_key] = path_info.map {|pair| pair.join('') }.join('.')
+    scope[:dr_error_key] = path_info.map { |pair| pair.join('') }.join('.')
 
     case action
     when :destroy
@@ -256,9 +256,13 @@ module DeepUnrest
     cursor
   end
 
-  def self.get_mutation_cursor(memo, cursor, addr, type, id, temp_id, scope_type)
+  def self.get_mutation_cursor(ctx, memo, cursor, addr, type, id, temp_id, scope_type)
     if memo
       record = { id: id || temp_id }
+      if temp_id
+        record[:deep_unrest_temp_id] = temp_id
+        record[:deep_unrest_context] = ctx
+      end
       if plural?(type)
         cursor[addr] = [record]
         next_cursor = cursor[addr][0]
@@ -273,6 +277,8 @@ module DeepUnrest
       klass = to_class(type)
       body = {}
       body[klass.primary_key.to_sym] = id if id
+      body[:deep_unrest_temp_id] = temp_id if temp_id
+      body[:deep_unrest_context] = ctx if temp_id
       cursor[type_sym] = {
         klass: klass
       }
@@ -329,7 +335,7 @@ module DeepUnrest
     mutations
   end
 
-  def self.build_mutation_fragment(op, scopes, user, err_path_memo, rest = nil, memo = nil, cursor = nil, type = nil)
+  def self.build_mutation_fragment(ctx, op, scopes, user, err_path_memo, rest = nil, memo = nil, cursor = nil, type = nil)
     rest ||= parse_path(op[:path])
 
     if rest.empty?
@@ -343,7 +349,8 @@ module DeepUnrest
     scope_type = get_scope_type(id_str, rest.blank?, op[:destroy])
     temp_id = scope_type == :create ? id_str : nil
 
-    memo, next_cursor = get_mutation_cursor(memo,
+    memo, next_cursor = get_mutation_cursor(ctx,
+                                            memo,
                                             cursor,
                                             addr,
                                             type,
@@ -352,44 +359,46 @@ module DeepUnrest
                                             scope_type)
 
     next_cursor[:id] = id if id
-    build_mutation_fragment(op, scopes, user, err_path_memo, rest, memo, next_cursor, type)
+    build_mutation_fragment(ctx, op, scopes, user, err_path_memo, rest, memo, next_cursor, type)
   end
 
-  def self.build_mutation_body(ops, scopes, user)
+  def self.build_mutation_body(ctx, ops, scopes, user)
     err_path_memo = {}
     ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
-      memo.deeper_merge(build_mutation_fragment(op, scopes, user, err_path_memo))
+      memo.deeper_merge(build_mutation_fragment(ctx, op, scopes, user, err_path_memo))
     end
   end
 
   def self.mutate(mutation, user)
-    mutation.map do |_, item|
-      item[:operations].map do |id, ops|
-        ops.map do |_, action|
-          record = case action[:method]
-                   when :update_all
-                     DeepUnrest.authorization_strategy
-                       .get_authorized_scope(user, item[:klass])
-                       .update(action[:body])
-                     nil
-                   when :destroy_all
-                     DeepUnrest.authorization_strategy
-                       .get_authorized_scope(user, item[:klass])
-                       .destroy_all
-                     nil
-                   when :update
-                     item[:klass].update(id, action[:body])
-                   when :create
-                     item[:klass].create(action[:body])
-                   when :destroy
-                     item[:klass].destroy(id)
-                   end
-          result = { record: record }
-          if action[:temp_id]
-            result[:temp_ids] = {}
-            result[:temp_ids][action[:temp_id]] = record.id
+    ActiveRecord::Base.transaction do
+      mutation.map do |_, item|
+        item[:operations].map do |id, ops|
+          ops.map do |_, action|
+            record = case action[:method]
+                     when :update_all
+                       DeepUnrest.authorization_strategy
+                                 .get_authorized_scope(user, item[:klass])
+                                 .update(action[:body])
+                       nil
+                     when :destroy_all
+                       DeepUnrest.authorization_strategy
+                                 .get_authorized_scope(user, item[:klass])
+                                 .destroy_all
+                       nil
+                     when :update
+                       item[:klass].update(id, action[:body])
+                     when :create
+                       item[:klass].create(action[:body])
+                     when :destroy
+                       item[:klass].destroy(id)
+                     end
+            result = { record: record }
+            if action[:temp_id]
+              result[:temp_ids] = {}
+              result[:temp_ids][action[:temp_id]] = record.id
+            end
+            result
           end
-          result
         end
       end
     end
@@ -470,7 +479,7 @@ module DeepUnrest
     record&.errors&.messages
   end
 
-  def self.perform_update(params, user)
+  def self.perform_update(ctx, params, user)
     # reject new resources marked for destruction
     viable_params = params.reject do |param|
       temp_id?(param[:path]) && param[:destroy].present?
@@ -483,7 +492,7 @@ module DeepUnrest
     DeepUnrest.authorization_strategy.authorize(scopes, user).flatten
 
     # bulid update arguments
-    mutations = build_mutation_body(viable_params, scopes, user)
+    mutations = build_mutation_body(ctx, viable_params, scopes, user)
 
     merge_siblings!(mutations)
     remove_temp_ids!(mutations)

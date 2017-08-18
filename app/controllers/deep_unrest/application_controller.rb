@@ -1,6 +1,10 @@
+# frozen_string_literal: true
+
 module DeepUnrest
   class ApplicationController < ActionController::API
     include DeepUnrest.authentication_concern
+
+    @@temp_ids = {}
 
     def context
       { current_user: current_user }
@@ -24,10 +28,12 @@ module DeepUnrest
     end
 
     def update
+      @@temp_ids[request.uuid] = {}
       redirect = allowed_params[:redirect]
       data = repair_nested_params(allowed_params)[:data]
-      results = DeepUnrest.perform_update(data, current_user)
-      resp = { destroyed: results[:destroyed] }
+      results = DeepUnrest.perform_update(request.uuid, data, current_user)
+      resp = { destroyed: results[:destroyed],
+               tempIds: @@temp_ids[request.uuid] }
       resp[:redirect] = results[:redirect_regex].call(redirect) if redirect
       render json: resp, status: 200
     rescue DeepUnrest::Unauthorized => err
@@ -36,6 +42,8 @@ module DeepUnrest
       render json: err.message, status: 405
     rescue DeepUnrest::Conflict => err
       render json: err.message, status: 409
+    ensure
+      @@temp_ids.delete(request.uuid)
     end
 
     def current_user

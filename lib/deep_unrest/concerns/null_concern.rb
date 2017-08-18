@@ -2,6 +2,7 @@ module DeepUnrest
   module Concerns
     module NullConcern
       extend ActiveSupport::Concern
+
       included do
         before_action :issue_warning
       end
