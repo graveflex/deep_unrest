@@ -480,6 +480,12 @@ module DeepUnrest
   end
 
   def self.perform_update(ctx, params, user)
+    temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
+      '@@temp_ids'
+    )
+
+    temp_id_map[ctx] = {}
+
     # reject new resources marked for destruction
     viable_params = params.reject do |param|
       temp_id?(param[:path]) && param[:destroy].present?
@@ -507,12 +513,9 @@ module DeepUnrest
                     .compact
 
     if errors.empty?
-      temp_ids = results.map { |res| res[:temp_ids] }
-                        .compact
-                        .each_with_object({}) { |item, mem| mem.merge!(item) }
-
       return {
-        redirect_regex: build_redirect_regex(temp_ids),
+        redirect_regex: build_redirect_regex(temp_id_map[ctx]),
+        temp_ids: temp_id_map[ctx],
         destroyed: scopes.select { |item| item[:destroyed] }
                          .map do |item|
                            { type: item[:type],

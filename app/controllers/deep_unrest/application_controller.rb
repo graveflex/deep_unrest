@@ -28,12 +28,11 @@ module DeepUnrest
     end
 
     def update
-      @@temp_ids[request.uuid] = {}
       redirect = allowed_params[:redirect]
       data = repair_nested_params(allowed_params)[:data]
       results = DeepUnrest.perform_update(request.uuid, data, current_user)
       resp = { destroyed: results[:destroyed],
-               tempIds: @@temp_ids[request.uuid] }
+               tempIds: results[:temp_ids] }
       resp[:redirect] = results[:redirect_regex].call(redirect) if redirect
       render json: resp, status: 200
     rescue DeepUnrest::Unauthorized => err
