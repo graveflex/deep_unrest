@@ -24,7 +24,6 @@ Gem::Specification.new do |s|
   s.add_dependency 'rails', '~> 5.1.0'
   s.add_dependency 'jsonapi-utils', '~> 0.6.0.beta'
   s.add_dependency 'jsonapi-resources', '~> 0.9.0'
-  s.add_dependency 'deep_merge', '~> 1.1.1'
 
   s.add_development_dependency 'sqlite3'
   s.add_development_dependency 'omniauth-github', '1.2.3'
