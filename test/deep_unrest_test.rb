@@ -389,8 +389,16 @@ module DeepUnrest
                     attributes: { name: survey_name } },
                   { path: "#{survey_path}.#{q1_path}.#{a1_path}",
                     attributes: { value: a1_val } },
+                  { path: "#{survey_path}.#{q1_path}.#{a1_path}",
+                    attributes: { value: a1_val } },
+                  { path: "#{survey_path}.#{q1_path}.#{a1_path}.attachments[2]",
+                    attributes: { fileUid: 123 } },
                   { path: "#{survey_path}.#{q1_path}.answers[1]",
                     attributes: { value: new_a_val } },
+                  { path: "#{survey_path}.#{q1_path}.answers[1].attachments[3]",
+                    attributes: { fileUid: 456 } },
+                  { path: "#{survey_path}.#{q1_path}.#{a1_path}.attachments[4]",
+                    attributes: { fileUid: 789 } },
                   { destroy: true,
                     path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
@@ -404,12 +412,29 @@ module DeepUnrest
           questions_attributes: [{ id: q1.id.to_s,
                                    answers_attributes: [
                                      {
-                                       id: a1.id.to_s,
-                                       value: a1_val
+                                       id: '[1]',
+                                       value: new_a_val,
+                                       attachments_attributes: [
+                                         {
+                                           id: '[3]',
+                                           file_uid: 456
+                                         }
+                                       ]
                                      },
                                      {
-                                       id: '[1]',
-                                       value: new_a_val
+                                       id: a1.id.to_s,
+                                       value: a1_val,
+                                       attachments_attributes: [
+                                         {
+                                           id: '[2]',
+                                           file_uid: 123
+                                         },
+
+                                         {
+                                           id: '[4]',
+                                           file_uid: 789
+                                         }
+                                       ]
                                      }
                                    ] },
                                  { id: q2.id.to_s,
@@ -419,8 +444,10 @@ module DeepUnrest
                                    }] }]
         )
 
+        result_body = result[:surveys][:operations][survey.id.to_s][:update][:body]
+
         assert_equal Survey, result[:surveys][:klass]
-        assert_equal expected, result[:surveys][:operations][survey.id.to_s][:update][:body]
+        assert_equal expected, result_body
         assert_equal :update, result[:surveys][:operations][survey.id.to_s][:update][:method]
       end
     end
