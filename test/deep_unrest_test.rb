@@ -103,7 +103,7 @@ module DeepUnrest
 
         assert_raises DeepUnrest::InvalidAssociation do
           params = [{ action: 'update',
-                      path: "#{survey_path}.#{q1_path}.attachments[2]",
+                      path: "#{survey_path}.#{q1_path}.admins[2]",
                       attributes: { description: 'option 1' } }]
           DeepUnrest.collect_all_scopes(params)
         end
@@ -234,14 +234,12 @@ module DeepUnrest
         user = applicants(:one)
         path = 'surveys.1.questions.2.answers[3].attachments[4]'
         action = :update
-        ctx = Faker::Crypto.md5
         value = Faker::TwinPeaks.quote
         params = [{ path: path,
                     attributes: { title: value },
                     action: action }]
         scopes = DeepUnrest.collect_all_scopes(params)
-        body_part = DeepUnrest.build_mutation_fragment(ctx,
-                                                       params.first,
+        body_part = DeepUnrest.build_mutation_fragment(params.first,
                                                        scopes,
                                                        user,
                                                        {})
@@ -261,14 +259,10 @@ module DeepUnrest
                         answers_attributes: [
                           {
                             id: '[3]',
-                            deep_unrest_temp_id: '[3]',
-                            deep_unrest_context: ctx,
                             attachments_attributes: [
                               {
                                 id: '[4]',
-                                title: value,
-                                deep_unrest_temp_id: '[4]',
-                                deep_unrest_context: ctx
+                                title: value
                               }
                             ]
                           }
@@ -289,7 +283,6 @@ module DeepUnrest
         user = admins(:one)
         path = 'surveys.1.questions.2'
         action = :update
-        ctx = Faker::Crypto.md5
         content = Faker::TwinPeaks.quote
         options = [Faker::TwinPeaks.location,
                    Faker::TwinPeaks.location]
@@ -298,8 +291,7 @@ module DeepUnrest
                                   options: options },
                     action: action }]
         scopes = DeepUnrest.collect_all_scopes(params)
-        body_part = DeepUnrest.build_mutation_fragment(ctx,
-                                                       params.first,
+        body_part = DeepUnrest.build_mutation_fragment(params.first,
                                                        scopes,
                                                        user,
                                                        {})
@@ -333,13 +325,11 @@ module DeepUnrest
       test 'marks fragments to be destroyed' do
         user = applicants(:one)
         path = 'surveys.1.questions.2.answers[3].attachments.4'
-        ctx = Faker::Crypto.md5
 
         params = [{ path: path,
                     destroy: true }]
         scopes = DeepUnrest.collect_all_scopes(params)
-        body_part = DeepUnrest.build_mutation_fragment(ctx,
-                                                       params.first,
+        body_part = DeepUnrest.build_mutation_fragment(params.first,
                                                        scopes,
                                                        user,
                                                        {})
@@ -359,8 +349,6 @@ module DeepUnrest
                         answers_attributes: [
                           {
                             id: '[3]',
-                            deep_unrest_temp_id: '[3]',
-                            deep_unrest_context: ctx,
                             attachments_attributes: [
                               {
                                 id: '4',
@@ -393,7 +381,6 @@ module DeepUnrest
         a1_path = "answers.#{a1.id}"
         a2 = answers(:two)
         a2_path = "answers.#{a2.id}"
-        ctx = Faker::Crypto.md5
         survey_name = Faker::TwinPeaks.location
         a1_val = Faker::TwinPeaks.quote
         new_a_val = Faker::TwinPeaks.quote
@@ -409,32 +396,27 @@ module DeepUnrest
 
         scopes = DeepUnrest.collect_all_scopes(params)
 
-        result = DeepUnrest.build_mutation_body(ctx, params, scopes, user)
+        result = DeepUnrest.build_mutation_body(params, scopes, user)
 
         expected = HashWithIndifferentAccess.new(
           id: survey.id.to_s,
           name: survey_name,
-          questions_attributes: [{
-            id: q1.id.to_s,
-            answers_attributes: [{
-              id: a1.id.to_s,
-              value: a1_val
-            }]
-          }, {
-            id: q1.id.to_s,
-            answers_attributes: [{
-              id: '[1]',
-              value: new_a_val,
-              deep_unrest_temp_id: '[1]',
-              deep_unrest_context: ctx,
-            }]
-          }, {
-            id: q2.id.to_s,
-            answers_attributes: [{
-              id: a2.id.to_s,
-              _destroy: true
-            }]
-          }]
+          questions_attributes: [{ id: q1.id.to_s,
+                                   answers_attributes: [
+                                     {
+                                       id: a1.id.to_s,
+                                       value: a1_val
+                                     },
+                                     {
+                                       id: '[1]',
+                                       value: new_a_val
+                                     }
+                                   ] },
+                                 { id: q2.id.to_s,
+                                   answers_attributes: [{
+                                     id: a2.id.to_s,
+                                     _destroy: true
+                                   }] }]
         )
 
         assert_equal Survey, result[:surveys][:klass]

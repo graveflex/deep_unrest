@@ -194,7 +194,11 @@ module DeepUnrest
     idx = {}
     params.map { |operation| collect_action_scopes(operation) }
           .flatten
-          .uniq
+          .each_with_object({}) do |op, memo|
+            # ensure no duplicate scopes
+            memo["#{op[:scope_type]}-#{op[:type]}-#{op[:id]}"] ||= {}
+            memo["#{op[:scope_type]}-#{op[:type]}-#{op[:id]}"].merge!(op)
+          end.values
           .map do |op|
             unless op[:scope_type] == :show
               op[:index] = update_indices(idx, op[:type])[op[:type]] - 1
@@ -204,6 +208,7 @@ module DeepUnrest
   end
 
   def self.parse_id(id_str)
+    return false if id_str.nil?
     id_match = id_str.match(/^\.?(?<id>\d+)$/)
     id_match && id_match[:id]
   end
@@ -256,13 +261,9 @@ module DeepUnrest
     cursor
   end
 
-  def self.get_mutation_cursor(ctx, memo, cursor, addr, type, id, temp_id, scope_type)
+  def self.get_mutation_cursor(memo, cursor, addr, type, id, temp_id, scope_type)
     if memo
       record = { id: id || temp_id }
-      if temp_id
-        record[:deep_unrest_temp_id] = temp_id
-        record[:deep_unrest_context] = ctx
-      end
       if plural?(type)
         cursor[addr] = [record]
         next_cursor = cursor[addr][0]
@@ -277,8 +278,6 @@ module DeepUnrest
       klass = to_class(type)
       body = {}
       body[klass.primary_key.to_sym] = id if id
-      body[:deep_unrest_temp_id] = temp_id if temp_id
-      body[:deep_unrest_context] = ctx if temp_id
       cursor[type_sym] = {
         klass: klass
       }
@@ -295,47 +294,28 @@ module DeepUnrest
     [memo, next_cursor]
   end
 
-  def self.merge_siblings!(mutations)
-    mutations.each do |k, v|
-      case v
-      when Array
-        h = v.each_with_object({}) do |item, memo|
-          if item.respond_to?(:key?) && item.key?(:id)
-            # this is a nested resource. merge as such
-            memo[item[:id]] ||= {}
-            memo[item[:id]].deeper_merge(item)
-            merge_siblings!(item)
-          else
-            # otherwise this is just a normal array
-            idx = memo.keys.size
-            memo[idx] = item
-          end
-        end
-        mutations[k] = h.values
-      when Hash
-        merge_siblings!(v)
-      end
-    end
-    mutations
-  end
-
-  def self.remove_temp_ids!(mutations)
+  def self.convert_temp_ids!(ctx, mutations)
     case mutations
     when Hash
-      mutations.map do |key, val|
+      mutations.keys.map do |key|
+        val = mutations[key]
         if ['id', :id].include?(key)
-          mutations.delete(key) unless parse_id(val)
+          unless parse_id(val)
+            mutations.delete(key)
+            mutations[:deep_unrest_temp_id] = val
+            mutations[:deep_unrest_context] = ctx
+          end
         else
-          remove_temp_ids!(val)
+          convert_temp_ids!(ctx, val)
         end
       end
     when Array
-      mutations.map { |val| remove_temp_ids!(val) }
+      mutations.map { |val| convert_temp_ids!(ctx, val) }
     end
     mutations
   end
 
-  def self.build_mutation_fragment(ctx, op, scopes, user, err_path_memo, rest = nil, memo = nil, cursor = nil, type = nil)
+  def self.build_mutation_fragment(op, scopes, user, err_path_memo, rest = nil, memo = nil, cursor = nil, type = nil)
     rest ||= parse_path(op[:path])
 
     if rest.empty?
@@ -349,8 +329,7 @@ module DeepUnrest
     scope_type = get_scope_type(id_str, rest.blank?, op[:destroy])
     temp_id = scope_type == :create ? id_str : nil
 
-    memo, next_cursor = get_mutation_cursor(ctx,
-                                            memo,
+    memo, next_cursor = get_mutation_cursor(memo,
                                             cursor,
                                             addr,
                                             type,
@@ -359,13 +338,42 @@ module DeepUnrest
                                             scope_type)
 
     next_cursor[:id] = id if id
-    build_mutation_fragment(ctx, op, scopes, user, err_path_memo, rest, memo, next_cursor, type)
+    build_mutation_fragment(op, scopes, user, err_path_memo, rest, memo, next_cursor, type)
   end
 
-  def self.build_mutation_body(ctx, ops, scopes, user)
+  def self.combine_arrays(a, b)
+    # get list of dupe items
+    groups = (a + b).flatten.group_by { |item| item[:id] }
+
+    dupes = groups.select { |_, v| v.size > 1 }.values
+
+    # combine non-dupe items
+    non_dupes = groups.select { |_, v| v.size == 1 }.values
+
+    # deep_merge dupes
+    merged = dupes.map do |(a2, b2)|
+      a2.deep_merge(b2) do |_, a3, b3|
+        if a3.is_a? Array
+          combine_arrays(a3, b3)
+        else
+          b3
+        end
+      end
+    end
+
+    (non_dupes + merged).flatten
+  end
+
+  def self.build_mutation_body(ops, scopes, user)
     err_path_memo = {}
     ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
-      memo.deeper_merge(build_mutation_fragment(ctx, op, scopes, user, err_path_memo))
+      memo.deep_merge!(build_mutation_fragment(op, scopes, user, err_path_memo)) do |key, a, b|
+        if a.is_a? Array
+          combine_arrays(a, b)
+        else
+          b
+        end
+      end
     end
   end
 
@@ -392,6 +400,7 @@ module DeepUnrest
                      when :destroy
                        item[:klass].destroy(id)
                      end
+
             result = { record: record }
             if action[:temp_id]
               result[:temp_ids] = {}
@@ -498,10 +507,10 @@ module DeepUnrest
     DeepUnrest.authorization_strategy.authorize(scopes, user).flatten
 
     # bulid update arguments
-    mutations = build_mutation_body(ctx, viable_params, scopes, user)
+    mutations = build_mutation_body(viable_params, scopes, user)
 
-    merge_siblings!(mutations)
-    remove_temp_ids!(mutations)
+    # convert temp_ids from ids to non-activerecord attributes
+    convert_temp_ids!(ctx, mutations)
 
     # perform update
     results = mutate(mutations, user).flatten

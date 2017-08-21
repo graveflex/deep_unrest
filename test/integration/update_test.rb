@@ -427,25 +427,58 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
   test 'replaces temp_ids in redirects with new actual ids' do
     user = applicants(:one)
-    name = Faker::TwinPeaks.quote
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+    q1 = questions(:one)
+    q1_path = "questions.#{q1.id}"
+    a1_val = Faker::TwinPeaks.quote
+    a2_val = Faker::TwinPeaks.quote
+    att1_uid = Faker::Pokemon.name
+    att2_uid = Faker::Pokemon.name
+    att3_uid = Faker::Pokemon.name
 
-    body = [{ path: 'surveys[1]',
-              attributes: { name: name,
+    body = [{ path: "#{survey_path}.#{q1_path}.answers[a1]",
+              attributes: { value: a1_val,
+                            applicantId: user.id,
+                            surveyId: survey.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[a2]",
+              attributes: { value: a2_val,
+                            applicantId: user.id,
+                            surveyId: survey.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[a1].attachments[att1]",
+              attributes: { fileUid: att1_uid,
+                            applicantId: user.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[a2].attachments[att2]",
+              attributes: { fileUid: att2_uid,
+                            applicantId: user.id } },
+            { path: "#{survey_path}.#{q1_path}.answers[a1].attachments[att3]",
+              attributes: { fileUid: att3_uid,
                             applicantId: user.id } }]
 
-    patch '/deep_unrest/update', auth_xhr_req({ data: body,
-                                                redirect: '/surveys/[1]' },
-                                              user)
-
-    survey = Survey.last
+    patch '/deep_unrest/update',
+          auth_xhr_req({ data: body,
+                         redirect: '/[a1]/[a2]/[att1]/[att2]/[att3]' },
+                       user)
 
     resp = JSON.parse(response.body)
+
     redirect = resp['redirect']
-    new_id = resp['tempIds']['[1]']
+    new_a1_id = resp['tempIds']['[a1]']
+    new_a2_id = resp['tempIds']['[a2]']
+    new_att1_id = resp['tempIds']['[att1]']
+    new_att2_id = resp['tempIds']['[att2]']
+    new_att3_id = resp['tempIds']['[att3]']
 
     assert_response :success
-    assert_equal "/surveys/#{survey.id}", redirect
-    assert_equal name, Survey.find(new_id).name
+    assert_equal "/#{new_a1_id}/#{new_a2_id}/#{new_att1_id}/#{new_att2_id}/"\
+                 "#{new_att3_id}",
+                 redirect
+
+    assert_equal a1_val, Answer.find(new_a1_id).value
+    assert_equal a2_val, Answer.find(new_a2_id).value
+    assert_equal att1_uid, Attachment.find(new_att1_id).file_uid
+    assert_equal att2_uid, Attachment.find(new_att2_id).file_uid
+    assert_equal att3_uid, Attachment.find(new_att3_id).file_uid
   end
 
   test 'simple destroy' do
