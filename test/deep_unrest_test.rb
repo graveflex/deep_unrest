@@ -385,6 +385,7 @@ module DeepUnrest
         a1_val = Faker::TwinPeaks.quote
         new_a_val = Faker::TwinPeaks.quote
 
+        # let's go crazy
         params = [{ path: survey_path,
                     attributes: { name: survey_name } },
                   { path: "#{survey_path}.#{q1_path}.#{a1_path}",

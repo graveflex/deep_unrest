@@ -342,15 +342,14 @@ module DeepUnrest
   end
 
   def self.combine_arrays(a, b)
-    # get list of dupe items
+    # get list of items duped by id
     groups = (a + b).flatten.group_by { |item| item[:id] }
-
     dupes = groups.select { |_, v| v.size > 1 }.values
 
-    # combine non-dupe items
+    # filter non-dupe
     non_dupes = groups.select { |_, v| v.size == 1 }.values
 
-    # deep_merge dupes
+    # recrsively merge dupes
     merged = dupes.map do |(a2, b2)|
       a2.deep_merge(b2) do |_, a3, b3|
         if a3.is_a? Array
@@ -361,6 +360,7 @@ module DeepUnrest
       end
     end
 
+    # add merged dupes to non-dupes
     (non_dupes + merged).flatten
   end
 
@@ -493,7 +493,7 @@ module DeepUnrest
       '@@temp_ids'
     )
 
-    temp_id_map[ctx] = {}
+    temp_id_map[ctx] ||= {}
 
     # reject new resources marked for destruction
     viable_params = params.reject do |param|
