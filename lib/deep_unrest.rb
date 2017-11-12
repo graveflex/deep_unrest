@@ -396,10 +396,12 @@ module DeepUnrest
                        nil
                      when :update
                        model = item[:klass].find(id)
+                       model.assign_attributes(action[:body])
                        resource = item[:resource].new(model, current_user: user)
                        resource.run_callbacks :save do
                          resource.run_callbacks :update do
-                           item[:klass].update(id, action[:body])
+                           model.save
+                           model
                          end
                        end
                      when :create
