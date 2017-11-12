@@ -3,6 +3,13 @@
 require 'test_helper'
 
 class UpdateTest < ActionDispatch::IntegrationTest
+  setup do
+    SurveyResource.any_instance.unstub(:track_save)
+    SurveyResource.any_instance.unstub(:track_update)
+    SurveyResource.any_instance.unstub(:track_create)
+    SurveyResource.any_instance.unstub(:track_remove)
+  end
+
   test 'authorization is performed when making updates' do
     user = applicants(:two)
     survey = surveys(:one)
@@ -36,6 +43,94 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_response 403
     assert_equal expected_error, JSON.parse(response.body)[0]['title']
     assert_equal survey_path, JSON.parse(response.body)[0]['source']['pointer']
+  end
+
+  test 'callbacks have access to current user' do
+    user = applicants(:one)
+    user.active = false
+    user.save!
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+    q1 = questions(:one)
+    q1_path = "questions.#{q1.id}"
+    q2 = questions(:two)
+    q2_path = "questions.#{q2.id}"
+    a1 = answers(:one)
+    a1_path = "answers.#{a1.id}"
+    a2 = answers(:two)
+    a2_path = "answers.#{a2.id}"
+    survey_name = Faker::TwinPeaks.location
+    a1_val = Faker::TwinPeaks.quote
+    new_a_val = Faker::TwinPeaks.quote
+
+    body = [{ path: survey_path,
+              attributes: { name: survey_name } },
+            { path: "#{survey_path}.#{q1_path}.#{a1_path}",
+              attributes: { value: a1_val } },
+            { path: "#{survey_path}.#{q1_path}.answers[1]",
+              attributes: { value: new_a_val } },
+            { destroy: true,
+              path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
+
+    assert_no_difference 'Answer.count' do
+      assert_raises Pundit::NotAuthorizedError do
+        patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+      end
+    end
+  end
+
+  test 'jsonapi resource callbacks are called on save' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+    survey_name = Faker::TwinPeaks.location
+
+    SurveyResource.any_instance.expects(:track_save).once
+    SurveyResource.any_instance.expects(:track_update).once
+    SurveyResource.any_instance.expects(:track_create).never
+    SurveyResource.any_instance.expects(:track_remove).never
+
+    body = [{ path: survey_path,
+              attributes: { name: survey_name } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+  end
+
+  test 'jsonapi resource callbacks are called on create' do
+    user = applicants(:one)
+    survey_path = 'surveys[123]'
+    survey_name = Faker::TwinPeaks.location
+
+    SurveyResource.any_instance.expects(:track_save).once
+    SurveyResource.any_instance.expects(:track_update).never
+    SurveyResource.any_instance.expects(:track_create).once
+    SurveyResource.any_instance.expects(:track_remove).never
+
+    body = [{ path: survey_path,
+              attributes: { name: survey_name,
+                            applicantId: user.id } }]
+
+    assert_difference 'Survey.count', 1 do
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+    end
+  end
+
+  test 'jsonapi resource callbacks are called on destroy' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+
+    SurveyResource.any_instance.expects(:track_save).never
+    SurveyResource.any_instance.expects(:track_update).never
+    SurveyResource.any_instance.expects(:track_create).never
+    SurveyResource.any_instance.expects(:track_remove).once
+
+    body = [{ path: survey_path,
+              destroy: true }]
+
+    assert_difference 'Survey.count', -1 do
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+    end
   end
 
   test 'temp_ids are mapped to the ids of the created resources' do

@@ -279,7 +279,8 @@ module DeepUnrest
       body = {}
       body[klass.primary_key.to_sym] = id if id
       cursor[type_sym] = {
-        klass: klass
+        klass: klass,
+        resource: get_resource(type)
       }
       cursor[type_sym][:operations] = {}
       cursor[type_sym][:operations][id || temp_id] = {}
@@ -394,11 +395,27 @@ module DeepUnrest
                                  .destroy_all
                        nil
                      when :update
-                       item[:klass].update(id, action[:body])
+                       model = item[:klass].find(id)
+                       resource = item[:resource].new(model, current_user: user)
+                       resource.run_callbacks :save do
+                         resource.run_callbacks :update do
+                           item[:klass].update(id, action[:body])
+                         end
+                       end
                      when :create
-                       item[:klass].create(action[:body])
+                       model = item[:klass].new(action[:body])
+                       resource = item[:resource].new(model, current_user: user)
+                       resource.run_callbacks :save do
+                         resource.run_callbacks :create do
+                           item[:klass].create(action[:body])
+                         end
+                       end
                      when :destroy
-                       item[:klass].destroy(id)
+                       model = item[:klass].find(id)
+                       resource = item[:resource].new(model, current_user: user)
+                       resource.run_callbacks :remove do
+                         item[:klass].destroy(id)
+                       end
                      end
 
             result = { record: record }

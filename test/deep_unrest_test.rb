@@ -247,6 +247,7 @@ module DeepUnrest
         expected = {
           surveys: {
             klass: Survey,
+            resource: SurveyResource,
             operations: {
               '1' => {
                 update: {
@@ -299,6 +300,7 @@ module DeepUnrest
         expected = {
           surveys: {
             klass: Survey,
+            resource: SurveyResource,
             operations: {
               '1' => {
                 update: {
@@ -337,6 +339,7 @@ module DeepUnrest
         expected = {
           surveys: {
             klass: Survey,
+            resource: SurveyResource,
             operations: {
               '1' => {
                 update: {

@@ -9,6 +9,7 @@ one:
   created_at:         '<%= timestamp %>'
   updated_at:         '<%= timestamp %>'
   encrypted_password: <%= Applicant.new.send(:password_digest, 'secret123') %>
+  active: true
 
 <% email = Faker::Internet.email %>
 two:
@@ -20,3 +21,4 @@ two:
   created_at:         '<%= timestamp %>'
   updated_at:         '<%= timestamp %>'
   encrypted_password: <%= Applicant.new.send(:password_digest, 'secret123') %>
+  active: true
