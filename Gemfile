@@ -24,6 +24,7 @@ group :test do
   gem 'database_cleaner', '1.6.0'
   gem 'dragonfly', '1.1.2'
   gem 'faker', '1.7.3'
+  gem 'mocha', '1.3.0'
   gem 'omniauth-github', '1.2.3'
   gem 'pundit', '1.1.0'
   gem 'sqlite3'
