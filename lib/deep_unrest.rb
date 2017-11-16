@@ -217,7 +217,7 @@ module DeepUnrest
     path_info.each_with_index.map do |(type, id), i|
       next if i.zero?
       parent_type, parent_id = path_info[i - 1]
-      key = "#{parent_type}#{parent_id}"
+      key = "#{parent_type}#{parent_id}#{type}"
       memo[key] = [] unless memo[key]
       idx = memo[key].find_index(id)
       unless idx
