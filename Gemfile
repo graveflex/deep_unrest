@@ -13,7 +13,7 @@ gemspec
 # your gem to rubygems.org.
 
 group :development, :test do
-  gem 'devise_token_auth', '~> 0.1.42'
+  gem 'devise_token_auth', '~> 0.2.0'
   gem 'jsonapi-resources', '~> 0.9.0'
   gem 'pry-rails'
   gem 'rubocop', '0.48.1', require: false

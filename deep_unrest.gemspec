@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
                 'Rakefile',
                 'README.md']
 
-  s.add_dependency 'rails', '~> 5.1.0'
+  s.add_dependency 'rails', '~> 5.2.0'
   s.add_dependency 'jsonapi-utils', '~> 0.6.0.beta'
   s.add_dependency 'jsonapi-resources', '~> 0.9.0'
 
