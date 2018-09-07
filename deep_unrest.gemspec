@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
                 'README.md']
 
   s.add_dependency 'rails', '~> 5.2.0'
-  s.add_dependency 'jsonapi-utils', '~> 0.6.0.beta'
+  s.add_dependency 'jsonapi-utils', '~> 0.7.2'
   s.add_dependency 'jsonapi-resources', '~> 0.9.0'
 
   s.add_development_dependency 'sqlite3'

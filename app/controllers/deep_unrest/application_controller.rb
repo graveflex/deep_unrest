@@ -28,8 +28,8 @@ module DeepUnrest
     end
 
     def update
-      redirect = allowed_params[:redirect]
-      data = repair_nested_params(allowed_params)[:data]
+      redirect = allowed_params[:data][:redirect]
+      data = repair_nested_params(allowed_params)[:data][:data]
       results = DeepUnrest.perform_update(request.uuid, data, current_user)
       resp = { destroyed: results[:destroyed],
                tempIds: results[:temp_ids] }
@@ -50,11 +50,11 @@ module DeepUnrest
     end
 
     def allowed_params
-      params.permit(:redirect,
-                    data: [:destroy,
-                           :path,
-                           :errorPath,
-                           { attributes: {} }])
+      params.permit(data: [:redirect,
+                           data: [:destroy,
+                                  :path,
+                                  :errorPath,
+                                  { attributes: {} }]])
     end
   end
 end

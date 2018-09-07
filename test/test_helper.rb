@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Configure Rails Environment
 ENV['RAILS_ENV'] = 'test'
 
@@ -45,7 +47,7 @@ module ActiveSupport
     # format request body according to JSONAPI expectations
     def xhr_req(params = {}, headers = {})
       {
-        params: params.to_json,
+        params: { data: params }.to_json,
         headers: headers.merge(
           CONTENT_TYPE: 'application/json'
         )
