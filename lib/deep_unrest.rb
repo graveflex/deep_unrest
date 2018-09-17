@@ -409,7 +409,9 @@ module DeepUnrest
                        resource = item[:resource].new(model, current_user: user)
                        resource.run_callbacks :save do
                          resource.run_callbacks :create do
-                           item[:klass].create(action[:body])
+                           # item[:klass].create(action[:body])
+                           resource._model.save
+                           resource._model
                          end
                        end
                      when :destroy
