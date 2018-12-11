@@ -250,7 +250,6 @@ module DeepUnrest
     case action
     when :destroy
       cursor[:_destroy] = true
-      scope[:destroyed] = true
     when :update, :create, :update_all
       cursor.merge! parse_attributes(type,
                                      operation[:action],
@@ -543,15 +542,13 @@ module DeepUnrest
                     .compact
 
     if errors.empty?
+      destroyed = DeepUnrest::ApplicationController.class_variable_get(
+        '@@destroyed_entities'
+      )
       return {
         redirect_regex: build_redirect_regex(temp_id_map[ctx]),
         temp_ids: temp_id_map[ctx],
-        destroyed: scopes.select { |item| item[:destroyed] }
-                         .map do |item|
-                           { type: item[:type],
-                             id: parse_id(item[:id]),
-                             destroyed: true }
-                         end
+        destroyed: destroyed
       }
     end
 

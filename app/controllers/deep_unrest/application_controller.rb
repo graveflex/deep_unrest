@@ -5,6 +5,7 @@ module DeepUnrest
     include DeepUnrest.authentication_concern
 
     @@temp_ids = {}
+    @@destroyed_entities = []
 
     def context
       { current_user: current_user }

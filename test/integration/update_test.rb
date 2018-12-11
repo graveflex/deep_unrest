@@ -579,6 +579,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
   test 'simple destroy' do
     user = applicants(:one)
     survey = surveys(:one)
+    questions = survey.questions.as_json
+    answers = survey.questions.as_json
 
     body = [{ path: "surveys.#{survey.id}",
               destroy: true }]
@@ -588,8 +590,22 @@ class UpdateTest < ActionDispatch::IntegrationTest
 
       # should return a list of all destroyed resources
       resp = JSON.parse(response.body)
-      assert_equal 'surveys', resp['destroyed'][0]['type']
-      assert_equal survey.id.to_s, resp['destroyed'][0]['id']
+      destroyed = resp['destroyed'].map(&:symbolize_keys!)
+
+      # the destroyed item itself should have been tracked
+      assert destroyed.include?(type: 'surveys', id: survey.id, destroyed: true)
+
+      # all destroyed associations should have been tracked
+      questions.each do |q|
+        assert destroyed.include?(type: 'questions',
+                                  id: q['id'],
+                                  destroyed: true)
+      end
+
+      # all nested destroyed associations should have been tracked
+      answers.each do |a|
+        assert destroyed.include?(type: 'answers', id: a['id'], destroyed: true)
+      end
     end
 
     assert_raises ActiveRecord::RecordNotFound do
