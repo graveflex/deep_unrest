@@ -111,5 +111,4 @@ ActiveRecord::Schema.define(version: 20171112194854) do
     t.datetime "updated_at", null: false
     t.index ["applicant_id"], name: "index_surveys_on_applicant_id"
   end
-
 end

@@ -14,7 +14,7 @@ module ActiveRecord
                                                new_record,
                                                autosave)
       if new_record || autosave
-        association && association.target
+        association&.target
       else
         association.target.find_all(&:new_record?)
       end
@@ -367,7 +367,7 @@ module DeepUnrest
   def self.build_mutation_body(ops, scopes, user)
     err_path_memo = {}
     ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
-      memo.deep_merge!(build_mutation_fragment(op, scopes, user, err_path_memo)) do |key, a, b|
+      memo.deep_merge!(build_mutation_fragment(op, scopes, user, err_path_memo)) do |_key, a, b|
         if a.is_a? Array
           combine_arrays(a, b)
         else
@@ -508,6 +508,25 @@ module DeepUnrest
     record&.errors&.messages
   end
 
+  def self.serialize_changes(diffs, user)
+    ctx = { current_user: user }
+    resources = diffs.map do |diff|
+      resource_klass = get_resource(diff[:model].to_s)
+      resource = diff[:attributes]
+      fields = {}
+      fields[to_assoc(diff[:model].to_s.pluralize)] = resource.keys
+                                                              .map(&:to_sym)
+      pk = diff[:model].primary_key
+      resource[pk] = diff[:id]
+      model = diff[:model].new(resource)
+      JSONAPI::ResourceSerializer.new(
+        resource_klass,
+        fields: fields
+      ).serialize_to_hash(resource_klass.new(model, ctx))[:data]
+    end
+    resources.select { |item| item.dig('attributes') }.compact
+  end
+
   def self.perform_update(ctx, params, user)
     temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
       '@@temp_ids'
@@ -545,10 +564,18 @@ module DeepUnrest
       destroyed = DeepUnrest::ApplicationController.class_variable_get(
         '@@destroyed_entities'
       )
+
+      changed = DeepUnrest::ApplicationController.class_variable_get(
+        '@@changed_entities'
+      )
+
+      diff = serialize_changes(changed, user)
+
       return {
         redirect_regex: build_redirect_regex(temp_id_map[ctx]),
         temp_ids: temp_id_map[ctx],
-        destroyed: destroyed
+        destroyed: destroyed,
+        changed: diff
       }
     end
 
