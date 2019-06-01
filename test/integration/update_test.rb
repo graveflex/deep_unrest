@@ -646,22 +646,56 @@ class UpdateTest < ActionDispatch::IntegrationTest
             { path: "#{survey_path}.#{q1_path}.#{a1_path}",
               attributes: { value: a1_val } },
             { path: "#{survey_path}.#{q1_path}.answers[1]",
-              attributes: { value: new_a_val } },
+              attributes: { value: new_a_val, applicantId: user.id } },
             { destroy: true,
               path: "#{survey_path}.#{q2_path}.#{a2_path}" }]
 
-    patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
-    resp = JSON.parse(response.body)
-    changed = resp['changed']
-    destroyed = resp['destroyed']
+    # this asserts that the activity items were created but the changes were
+    # not reported. this assertion checks that the change tracker respects
+    # resource permissions
+    assert_difference 'Activity.count', 3 do
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+      resp = JSON.parse(response.body).deep_symbolize_keys
+      changed = resp[:changed]
+      destroyed = resp[:destroyed]
 
-    assert_equal(1, destroyed.size)
-    assert_equal(3, changed.size)
+      assert_equal(1, destroyed.size)
+      assert_equal(3, changed.size)
 
-    assert_equal(q2.id, destroyed[0]['id'])
-    assert_equal({ 'value' => a1_val }, changed[0]['attributes'])
-    assert_equal({ 'value' => new_a_val, 'questionId' => q1.id },
-                 changed[1]['attributes'])
-    assert_equal({ 'name' => survey_name }, changed[2]['attributes'])
+      assert_equal(q2.id, destroyed[0][:id])
+      assert_equal({ value: a1_val }, changed[0][:attributes])
+      assert_equal({ value: new_a_val,
+                     questionId: q1.id,
+                     applicantId: user.id },
+                   changed[1][:attributes])
+      assert_equal({ name: survey_name }, changed[2][:attributes])
+    end
+  end
+
+  test 'changes to indirectly affected models are tracked' do
+    user = admins(:one)
+    survey = surveys(:one)
+
+    body = [{ path: "surveys.#{survey.id}",
+              attributes: { approved: true } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
+
+    resp = JSON.parse(response.body).deep_symbolize_keys
+    changed = resp[:changed]
+
+    applicant = survey.applicant
+
+    expected_log = "Applicant #{applicant.id} updated Survey #{survey.id}"
+
+    assert_equal(2, changed.size)
+    assert_equal({ approved: true }, changed[0][:attributes])
+    assert_equal({ userType: 'Applicant',
+                   userId: applicant.id,
+                   targetType: 'Survey',
+                   targetId: survey.id,
+                   logMessage: expected_log },
+                 changed[1][:attributes])
   end
 end

@@ -46,6 +46,8 @@ module DeepUnrest
       render json: err.message, status: :conflict
     ensure
       @@temp_ids.delete(request.uuid)
+      @@destroyed_entities.clear
+      @@changed_entities.clear
     end
 
     def current_user

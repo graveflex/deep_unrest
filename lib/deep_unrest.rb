@@ -510,19 +510,32 @@ module DeepUnrest
 
   def self.serialize_changes(diffs, user)
     ctx = { current_user: user }
-    resources = diffs.map do |diff|
-      resource_klass = get_resource(diff[:model].to_s)
-      resource = diff[:attributes]
+    diffs.each do |diff|
+      diff[:resource] = diff[:attributes]
+      pk = diff[:klass].primary_key
+      diff[:resource][pk] = diff[:id]
+      diff[:model] = diff[:klass].new(diff[:resource])
+    end
+
+    allowed_models = diffs.select do |diff|
+      scope = DeepUnrest.authorization_strategy
+                        .get_authorized_scope(user,
+                                              diff[:klass])
+      scope.exists?(diff[:id])
+    rescue NameError
+      false
+    end
+
+    resources = allowed_models.map do |diff|
+      resource_klass = get_resource(diff[:klass].to_s)
       fields = {}
-      fields[to_assoc(diff[:model].to_s.pluralize)] = resource.keys
-                                                              .map(&:to_sym)
-      pk = diff[:model].primary_key
-      resource[pk] = diff[:id]
-      model = diff[:model].new(resource)
+      keys = diff[:resource].keys.map(&:to_sym)
+      fields[to_assoc(diff[:klass].to_s.pluralize)] = keys
+
       JSONAPI::ResourceSerializer.new(
         resource_klass,
         fields: fields
-      ).serialize_to_hash(resource_klass.new(model, ctx))[:data]
+      ).serialize_to_hash(resource_klass.new(diff[:model], ctx))[:data]
     end
     resources.select { |item| item.dig('attributes') }.compact
   end

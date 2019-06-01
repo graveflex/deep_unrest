@@ -10,7 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171112194854) do
+ActiveRecord::Schema.define(version: 2019_06_01_190350) do
+
+  create_table "activities", force: :cascade do |t|
+    t.string "user_type"
+    t.integer "user_id"
+    t.string "target_type"
+    t.integer "target_id"
+    t.string "log_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["target_type", "target_id"], name: "index_activities_on_target_type_and_target_id"
+    t.index ["user_type", "user_id"], name: "index_activities_on_user_type_and_user_id"
+  end
 
   create_table "admins", force: :cascade do |t|
     t.string "provider", default: "email", null: false
@@ -111,4 +123,5 @@ ActiveRecord::Schema.define(version: 20171112194854) do
     t.datetime "updated_at", null: false
     t.index ["applicant_id"], name: "index_surveys_on_applicant_id"
   end
+
 end

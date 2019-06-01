@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Survey < ApplicationRecord
+  include TrackActivity
   belongs_to :applicant
   has_many :questions,
            index_errors: true,

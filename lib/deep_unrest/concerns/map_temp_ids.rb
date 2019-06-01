@@ -13,12 +13,16 @@ module DeepUnrest
         after_save :track_changes
       end
 
+      def pk
+        send self.class.primary_key
+      end
+
       def map_temp_id
         temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
           '@@temp_ids'
         )
         return unless temp_id_map && @deep_unrest_temp_id
-        temp_id_map[@deep_unrest_context][@deep_unrest_temp_id] = id
+        temp_id_map[@deep_unrest_context][@deep_unrest_temp_id] = pk
       end
 
       # the client needs to know which items were destroyed so it can clean up
@@ -30,7 +34,7 @@ module DeepUnrest
         return unless destroyed
         destroyed << {
           type: self.class.to_s.pluralize.camelize(:lower),
-          id: id,
+          id: pk,
           destroyed: true
         }
       end
@@ -43,8 +47,8 @@ module DeepUnrest
         )
         return unless changed && saved_changes?
         changed << {
-          model: self.class,
-          id: id,
+          klass: self.class,
+          id: pk,
           attributes: attribute_diff
         }
       end

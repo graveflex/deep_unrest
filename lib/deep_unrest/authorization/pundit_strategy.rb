@@ -37,6 +37,8 @@ module DeepUnrest
         end
 
         Pundit.policy!(user, target).send(get_policy_name(scope[:scope_type]))
+      rescue Pundit::NotDefinedError
+        false
       end
 
       def self.authorize(scopes, user)
