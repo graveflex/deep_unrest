@@ -285,8 +285,8 @@ module DeepUnrest
         path = 'surveys.1.questions.2'
         action = :update
         content = Faker::TwinPeaks.quote
-        options = [Faker::TwinPeaks.location,
-                   Faker::TwinPeaks.location]
+        options = [[Faker::TwinPeaks.location,
+                    Faker::TwinPeaks.location]]
         params = [{ path: path,
                     attributes: { content: content,
                                   options: options },

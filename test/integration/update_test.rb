@@ -698,4 +698,23 @@ class UpdateTest < ActionDispatch::IntegrationTest
                    logMessage: expected_log },
                  changed[1][:attributes])
   end
+
+  test 'handles changes to nested arrays' do
+    user = admins(:one)
+    question = questions(:one)
+
+    body = [{ path: "questions.#{question.id}",
+              attributes: { options: [[Faker::Lorem.word, Faker::Lorem.word],
+                                      [Faker::Lorem.word, Faker::Lorem.word]] } }]
+
+    patch '/deep_unrest/update', auth_xhr_req({ data: body },
+                                              user)
+
+    resp = JSON.parse(response.body).deep_symbolize_keys
+    changed = resp[:changed]
+
+    assert_equal(1, changed.size)
+    assert_equal(body[0][:attributes][:options],
+                 changed[0][:attributes][:options])
+  end
 end

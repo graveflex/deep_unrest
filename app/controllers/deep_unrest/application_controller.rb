@@ -4,6 +4,8 @@ module DeepUnrest
   class ApplicationController < ActionController::API
     include DeepUnrest.authentication_concern
 
+    around_action :allow_nested_arrays, only: :update
+
     @@temp_ids = {}
     @@destroyed_entities = []
     @@changed_entities = []
@@ -60,6 +62,12 @@ module DeepUnrest
                                   :path,
                                   :errorPath,
                                   { attributes: {} }]])
+    end
+
+    def allow_nested_arrays
+      ::ActionController::Parameters::PERMITTED_SCALAR_TYPES << Array
+      yield
+      ::ActionController::Parameters::PERMITTED_SCALAR_TYPES - [Array]
     end
   end
 end
