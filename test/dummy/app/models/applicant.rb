@@ -4,4 +4,6 @@ class Applicant < ApplicationRecord
           :recoverable, :rememberable, :trackable, :validatable,
           :confirmable, :omniauthable
   include DeviseTokenAuth::Concerns::User
+
+  has_many :answers
 end

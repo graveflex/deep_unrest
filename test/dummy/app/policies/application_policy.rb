@@ -6,12 +6,20 @@ class ApplicationPolicy
     @record = record
   end
 
+  def index?
+    true
+  end
+
   def show?
-    scope.where(:id => record.id).exists?
+    scope.where(id: record.id).exists?
   end
 
   def update?
     false
+  end
+
+  def create?
+    true
   end
 
   def scope

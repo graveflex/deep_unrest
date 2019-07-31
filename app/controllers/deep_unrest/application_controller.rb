@@ -28,9 +28,19 @@ module DeepUnrest
       end
     end
 
+    def read
+      repaired_params = params[:data]
+      data = repaired_params[:data]
+      context = repaired_params[:context] || {}
+      context[:uuid] = request.uuid
+      context[:current_user] = current_user
+      results = DeepUnrest.perform_read(context, data, current_user)
+      render json: results, status: 200
+    end
+
     def update
-      redirect = allowed_params[:data][:redirect]
-      data = repair_nested_params(allowed_params)[:data][:data]
+      redirect = allowed_write_params[:data][:redirect]
+      data = repair_nested_params(allowed_write_params)[:data][:data]
       results = DeepUnrest.perform_update(request.uuid, data, current_user)
       resp = { destroyed: results[:destroyed],
                tempIds: results[:temp_ids] }
@@ -50,7 +60,7 @@ module DeepUnrest
       instance_eval &DeepUnrest.get_user
     end
 
-    def allowed_params
+    def allowed_write_params
       params.permit(data: [:redirect,
                            data: [:destroy,
                                   :path,

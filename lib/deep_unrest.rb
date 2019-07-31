@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'deep_unrest/engine'
+require 'deep_unrest/read'
 
 # workaronud for rails bug with association indices.
 # see https://github.com/rails/rails/pull/24728
@@ -46,6 +47,9 @@ module DeepUnrest
   end
 
   class Unauthorized < ::StandardError
+  end
+
+  class InvalidQuery < ::StandardError
   end
 
   def self.to_class(str)
@@ -506,6 +510,10 @@ module DeepUnrest
   def self.format_error_keys(res)
     record = res[:record]
     record&.errors&.messages
+  end
+
+  def self.perform_read(ctx, params, user)
+    DeepUnrest::Read.read(ctx, params, user)
   end
 
   def self.perform_update(ctx, params, user)

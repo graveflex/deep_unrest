@@ -7,9 +7,9 @@ ENV['RAILS_ENV'] = 'test'
 require 'simplecov'
 SimpleCov.start
 
-require File.expand_path('../../test/dummy/config/environment.rb', __FILE__)
-ActiveRecord::Migrator.migrations_paths = [File.expand_path('../../test/dummy/db/migrate', __FILE__)]
-ActiveRecord::Migrator.migrations_paths << File.expand_path('../../db/migrate', __FILE__)
+require File.expand_path('../test/dummy/config/environment.rb', __dir__)
+ActiveRecord::Migrator.migrations_paths = [File.expand_path('../test/dummy/db/migrate', __dir__)]
+ActiveRecord::Migrator.migrations_paths << File.expand_path('../db/migrate', __dir__)
 require 'rails/test_help'
 require 'mocha/mini_test'
 
@@ -18,7 +18,7 @@ DatabaseCleaner.strategy = :transaction
 module ActiveSupport
   class TestCase
     if ActiveSupport::TestCase.respond_to?(:fixture_path=)
-      self.fixture_path = File.expand_path('../dummy/test/fixtures', __FILE__)
+      self.fixture_path = File.expand_path('dummy/test/fixtures', __dir__)
       self.fixture_path = ActiveSupport::TestCase.fixture_path
       self.file_fixture_path = ActiveSupport::TestCase.fixture_path + '/files'
       fixtures :all
@@ -45,9 +45,10 @@ module ActiveSupport
     end
 
     # format request body according to JSONAPI expectations
-    def xhr_req(params = {}, headers = {})
+    def xhr_req(params = {}, headers = {}, is_post = true)
+      body = is_post ? { data: params }.to_json : { data: params }.to_query
       {
-        params: { data: params }.to_json,
+        params: body,
         headers: headers.merge(
           CONTENT_TYPE: 'application/json'
         )
@@ -56,16 +57,22 @@ module ActiveSupport
 
     # format a JSONAPI request by an authenticated user.
     # a new confirmed user is created and used unless one is provided
-    def auth_xhr_req(params = {}, user = nil)
-      user = create_authed_user unless user
-      xhr_req(params, user.create_new_auth_token)
+    def auth_xhr_req(params = {}, user = nil, is_post = true)
+      user ||= create_authed_user
+      xhr_req(params, user.create_new_auth_token, is_post)
     end
 
     # format a multipart/form-data request by an authenticated user.
     # a new confirmed user is created and used unless one is provided
     def auth_multipart_req(params, user = nil)
-      user = create_authed_user unless user
+      user ||= create_authed_user
       multipart_req(params, user.create_new_auth_token)
+    end
+
+    def format_response
+      resp = ::JSON.parse(response.body)
+      ActiveSupport::HashWithIndifferentAccess.new(resp)
+                                              .deep_symbolize_keys
     end
   end
 end
