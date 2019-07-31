@@ -14,6 +14,8 @@ class ReadTest < ActionDispatch::IntegrationTest
     survey.answers.each do |answer|
       count.times do
         Attachment.create!(applicant: survey.applicant,
+                           created_at: Faker::Date.between(5.days.ago,
+                                                           Date.today),
                            answer: answer)
       end
     end
@@ -44,6 +46,8 @@ class ReadTest < ActionDispatch::IntegrationTest
 
     create_attachments(survey, 30)
 
+    cursor_attachment = second_answer.attachments.all[5]
+
     params = {
       survey: {
         id: survey.id,
@@ -61,13 +65,15 @@ class ReadTest < ActionDispatch::IntegrationTest
                   attachments: {
                     filter: { answerId: { fromContext: 'answer.id' },
                               applicantId: { fromContext: 'applicant.id' } },
-                    fields: %w[answerId fileUid applicantId],
+                    fields: %w[answerId fileUid applicantId createdAt],
                     sort: [{ field: 'id', direction: 'asc' }],
                     paginate: { page: 1, size: 3 },
                     extend: {
                       "#{second_answer.id}": {
-                        paginate: { size: 4 },
-                        sort: [{ field: 'id', direction: 'desc' }]
+                        paginate: { type: :cursor,
+                                    size: 4,
+                                    after: cursor_attachment.id },
+                        sort: [{ field: 'created_at', direction: 'desc' }]
                       }
                     }
                   }

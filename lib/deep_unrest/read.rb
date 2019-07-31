@@ -2,10 +2,6 @@
 
 module DeepUnrest
   module Read
-    # def self.map_included(params, addr)
-    # params[:include].map { |k, v| create_read_mappings({ "#{k}": v }, [*addr, :include]) }
-    # end
-
     def self.create_read_mappings(params, addr = [])
       return unless params
       params.map do |k, v|
@@ -106,13 +102,15 @@ module DeepUnrest
       recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :included])
     end
 
-    def self.get_paginator(query, _parent)
+    def self.get_paginator(query)
       opts = query.dig(:paginate) || {}
       params = ActionController::Parameters.new(opts)
 
-      case params[:type]
+      case params[:type]&.to_sym
       when :offset
         OffsetPaginator.new(params)
+      when :cursor
+        DeepUnrest::Paginators::CursorPaginator.new(params)
       else
         PagedPaginator.new(params)
       end
@@ -124,16 +122,13 @@ module DeepUnrest
       query = resolve_conditions(base_query.deep_merge(extension),
                                  parent_context)
 
-      paginator = get_paginator(query, parent)
+      paginator = get_paginator(query)
       resource = item[:resource]
 
       # monkey patch the resource to only show authorized records
       def resource.records_base(_opts)
         item[:scope]
       end
-
-      # results = resource.find(query[:filter], paginator: paginator,
-                                              # sort_criteria: query[:sort])
 
       processor = JSONAPI::Processor.new(item[:resource],
                                          :find,
