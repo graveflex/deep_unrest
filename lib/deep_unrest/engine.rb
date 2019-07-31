@@ -15,12 +15,16 @@ module DeepUnrest
   mattr_accessor :page_size
   mattr_accessor :authentication_concern
   mattr_accessor :get_user
+  mattr_accessor :before_read
+  mattr_accessor :before_update
 
   self.authorization_strategy = DeepUnrest::Authorization::PunditStrategy
   self.pagination_strategy = DeepUnrest::Paginators::Basic
   self.page_size = 25
   self.authentication_concern = DeepUnrest::Concerns::NullConcern
   self.get_user = proc { current_user }
+  self.before_read = nil
+  self.before_update = nil
 
   def self.configure(&_block)
     yield self

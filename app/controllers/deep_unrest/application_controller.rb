@@ -34,14 +34,23 @@ module DeepUnrest
       context = repaired_params[:context] || {}
       context[:uuid] = request.uuid
       context[:current_user] = current_user
+
+      instance_eval &DeepUnrest.before_read if DeepUnrest.before_read
+
       results = DeepUnrest.perform_read(context, data, current_user)
       render json: results, status: 200
     end
 
     def update
       redirect = allowed_write_params[:data][:redirect]
+      context = allowed_write_params[:data][:context] || {}
+      context[:uuid] = request.uuid
+      context[:current_user] = current_user
       data = repair_nested_params(allowed_write_params)[:data][:data]
-      results = DeepUnrest.perform_update(request.uuid, data, current_user)
+
+      instance_eval &DeepUnrest.before_update if DeepUnrest.before_update
+
+      results = DeepUnrest.perform_update(context, data)
       resp = { destroyed: results[:destroyed],
                tempIds: results[:temp_ids] }
       resp[:redirect] = results[:redirect_regex].call(redirect) if redirect

@@ -5,5 +5,5 @@ class Applicant < ApplicationRecord
           :confirmable, :omniauthable
   include DeviseTokenAuth::Concerns::User
 
-  has_many :answers
+  has_many :answers, dependent: :destroy
 end

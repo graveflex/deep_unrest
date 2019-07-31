@@ -45,6 +45,35 @@ class UpdateTest < ActionDispatch::IntegrationTest
     assert_equal survey_path, JSON.parse(response.body)[0]['source']['pointer']
   end
 
+  test 'before_update is called' do
+    user = applicants(:one)
+    user.name = 'homer'
+    user.save!
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+
+    body = [{ path: survey_path,
+              attributes: { name: Faker::TwinPeaks.quote } }]
+
+    assert_raises Pundit::NotAuthorizedError do
+      patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
+    end
+  end
+
+  test 'context is passed to before_update' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+
+    body = [{ path: survey_path,
+              attributes: { name: Faker::TwinPeaks.quote } }]
+
+    assert_raises Pundit::NotAuthorizedError do
+      patch '/deep_unrest/update',
+            auth_xhr_req({ data: body, context: { block_me: true } }, user)
+    end
+  end
+
   test 'callbacks have access to current user' do
     user = applicants(:one)
     user.active = false

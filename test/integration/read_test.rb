@@ -37,6 +37,39 @@ class ReadTest < ActionDispatch::IntegrationTest
     assert_equal resp.dig(:survey, :attributes), name: survey.name
   end
 
+  test 'before_read is called' do
+    user = applicants(:one)
+    user.name = 'homer'
+    user.save!
+
+    params = {
+      surveys: {
+        fields: [:name]
+      }
+    }
+
+    assert_raises Pundit::NotAuthorizedError do
+      get '/deep_unrest/read', auth_xhr_req({ data: params }, user, false)
+    end
+  end
+
+  test 'context is passed to before_read' do
+    user = applicants(:one)
+
+    params = {
+      surveys: {
+        fields: [:name]
+      }
+    }
+
+    assert_raises Pundit::NotAuthorizedError do
+      get '/deep_unrest/read', auth_xhr_req({ data: params,
+                                              context: { block_me: true } },
+                                            user,
+                                            false)
+    end
+  end
+
   test 'nested associations are returned' do
     user = admins(:one)
     survey = surveys(:one)
@@ -92,6 +125,6 @@ class ReadTest < ActionDispatch::IntegrationTest
 
     assert_equal(survey.id, resp[:survey][:id].to_i)
 
-    binding.pry
+    # binding.pry
   end
 end

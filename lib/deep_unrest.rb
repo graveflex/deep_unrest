@@ -381,7 +381,8 @@ module DeepUnrest
     end
   end
 
-  def self.mutate(mutation, user)
+  def self.mutate(mutation, context)
+    user = context[:current_user]
     ActiveRecord::Base.transaction do
       mutation.map do |_, item|
         item[:operations].map do |id, ops|
@@ -400,7 +401,7 @@ module DeepUnrest
                      when :update
                        model = item[:klass].find(id)
                        model.assign_attributes(action[:body])
-                       resource = item[:resource].new(model, current_user: user)
+                       resource = item[:resource].new(model, context)
                        resource.run_callbacks :save do
                          resource.run_callbacks :update do
                            model.save
@@ -409,17 +410,16 @@ module DeepUnrest
                        end
                      when :create
                        model = item[:klass].new(action[:body])
-                       resource = item[:resource].new(model, current_user: user)
+                       resource = item[:resource].new(model, context)
                        resource.run_callbacks :save do
                          resource.run_callbacks :create do
-                           # item[:klass].create(action[:body])
                            resource._model.save
                            resource._model
                          end
                        end
                      when :destroy
                        model = item[:klass].find(id)
-                       resource = item[:resource].new(model, current_user: user)
+                       resource = item[:resource].new(model, context)
                        resource.run_callbacks :remove do
                          item[:klass].destroy(id)
                        end
@@ -516,12 +516,15 @@ module DeepUnrest
     DeepUnrest::Read.read(ctx, params, user)
   end
 
-  def self.perform_update(ctx, params, user)
+  def self.perform_update(ctx, params)
     temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
       '@@temp_ids'
     )
 
-    temp_id_map[ctx] ||= {}
+    user = ctx[:current_user]
+    uuid = ctx[:uuid]
+
+    temp_id_map[uuid] ||= {}
 
     # reject new resources marked for destruction
     viable_params = params.reject do |param|
@@ -538,10 +541,10 @@ module DeepUnrest
     mutations = build_mutation_body(viable_params, scopes, user)
 
     # convert temp_ids from ids to non-activerecord attributes
-    convert_temp_ids!(ctx, mutations)
+    convert_temp_ids!(uuid, mutations)
 
     # perform update
-    results = mutate(mutations, user).flatten
+    results = mutate(mutations, ctx).flatten
 
     # check results for errors
     errors = results.map { |res| format_error_keys(res) }
@@ -554,8 +557,8 @@ module DeepUnrest
         '@@destroyed_entities'
       )
       return {
-        redirect_regex: build_redirect_regex(temp_id_map[ctx]),
-        temp_ids: temp_id_map[ctx],
+        redirect_regex: build_redirect_regex(temp_id_map[uuid]),
+        temp_ids: temp_id_map[uuid],
         destroyed: destroyed
       }
     end

@@ -4,7 +4,10 @@ class Answer < ApplicationRecord
   belongs_to :question
   belongs_to :survey, required: false
   belongs_to :applicant, required: false
-  has_many :attachments, index_errors: true, inverse_of: :answer
+  has_many :attachments,
+           index_errors: true,
+           inverse_of: :answer,
+           dependent: :destroy
 
   accepts_nested_attributes_for :attachments,
                                 allow_destroy: true
