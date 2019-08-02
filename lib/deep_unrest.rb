@@ -127,7 +127,7 @@ module DeepUnrest
   def self.get_scope(scope_type, memo, type, id_str = nil)
     case scope_type
     when :show, :update, :destroy
-      id = /^\.(?<id>\d+)$/.match(id_str)[:id]
+      id = /^\.(?<id>[\w-]+)$/.match(id_str)[:id]
       { base: to_class(type), method: :find, arguments: [id] }
     when :update_all, :index
       if memo.empty?
