@@ -24,6 +24,7 @@ module DeepUnrest
         match4 = DeepUnrest.parse_path('surveys[1].questions.*')
         match5 = DeepUnrest.parse_path('surveys.1.questions.2.answers[1]')
         match6 = DeepUnrest.parse_path('surveys.*.questions.*.answers.*')
+        match7 = DeepUnrest.parse_path('surveys.177d371f-2a79-422d-94c2-13fbae258c86.questions.*')
 
         assert_equal scan_to_h(match1), [{ type: 'surveys',
                                            id: '.*' }]
@@ -47,12 +48,28 @@ module DeepUnrest
                                            id: '.*' },
                                          { type: 'answers',
                                            id: '.*' }]
+        assert_equal scan_to_h(match7), [{ type: 'surveys',
+                                           id: '.177d371f-2a79-422d-94c2-13fbae258c86' },
+                                         { type: 'questions',
+                                           id: '.*' }]
       end
 
       test 'throws errors when path is invalid' do
         assert_raises DeepUnrest::InvalidPath do
           DeepUnrest.parse_path('answers.questions.2')
         end
+      end
+    end
+
+    class ParseId < ActiveSupport::TestCase
+      test 'parses id from path' do
+        match1 = '.177d371f-2a79-422d-94c2-13fbae258c86'
+        match2 = '.2'
+
+        assert_equal DeepUnrest.parse_id(match1),
+                    '177d371f-2a79-422d-94c2-13fbae258c86'
+
+        assert_equal DeepUnrest.parse_id(match2), '2'
       end
     end
 

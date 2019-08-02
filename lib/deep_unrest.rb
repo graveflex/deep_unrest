@@ -213,7 +213,7 @@ module DeepUnrest
 
   def self.parse_id(id_str)
     return false if id_str.nil?
-    id_match = id_str.match(/^\.?(?<id>\d+)$/)
+    id_match = id_str.match(/^\.?(?<id>[\w\-]+)$/)
     id_match && id_match[:id]
   end
 
