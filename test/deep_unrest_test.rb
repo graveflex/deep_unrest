@@ -96,10 +96,12 @@ module DeepUnrest
 
     class IdentifyScopes < ActiveSupport::TestCase
       test 'derives scope type from id' do
+        assert_equal :show, DeepUnrest.get_scope_type('.177d371f-2a79-422d-94c2-13fbae258c86', false, false)
         assert_equal :show, DeepUnrest.get_scope_type('.0', false, false)
         assert_equal :show, DeepUnrest.get_scope_type('.123', false, false)
         assert_equal :show, DeepUnrest.get_scope_type('.abcdef', false, false)
         assert_equal :update, DeepUnrest.get_scope_type('.abcdef', true, false)
+        assert_equal :update, DeepUnrest.get_scope_type('.177d371f-2a79-422d-94c2-13fbae258c86', true, false)
         assert_equal :destroy, DeepUnrest.get_scope_type('.abcdef', true, true)
         assert_equal :create, DeepUnrest.get_scope_type('[0]', false, false)
         assert_equal :create, DeepUnrest.get_scope_type('[123]', false, false)

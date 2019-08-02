@@ -72,7 +72,7 @@ module DeepUnrest
     case id
     when /^\[[\w+\-]+\]$/
       :create
-    when /^\.\w+$/
+    when /^\.[\w-]+$/
       if last
         if destroy.present?
           :destroy
