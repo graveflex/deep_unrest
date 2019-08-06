@@ -24,16 +24,9 @@ module DeepUnrest
       str.pluralize == str && str.singularize != str
     end
 
-    def self.serialize_result(ctx, item)
-      JSONAPI::ResourceSerializer.new(item[:resource],
-                                      fields: {
-                                        "#{item[:key].pluralize}": item[:query][:fields].map(&:underscore).map(&:to_sym)
-                                      }).serialize_to_hash(item[:resource].new(item[:record], ctx))[:data]
-    end
-
     def self.serialize_results(ctx, data)
       data.each do |item|
-        item[:serialized_result] = serialize_result(ctx, item)
+        item[:serialized_result] = DeepUnrest.serialize_result(ctx, item)
       end
     end
 

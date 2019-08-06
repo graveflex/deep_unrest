@@ -48,6 +48,7 @@ module DeepUnrest
         next_attrs = item.dig(:query, :attributes || {})
                          .deep_symbolize_keys
         update_body = { id: item.dig(:query, :id),
+                        deep_unrest_query_uuid: item.dig(:query, :uuid),
                         **next_attrs }
         update_body[:_destroy] = true if item[:scope_type] == :destroy
         DeepUnrest.set_attr(memo, item[:ar_addr].clone, update_body)
@@ -97,6 +98,18 @@ module DeepUnrest
       end
     end
 
+    def self.serialize_changes(ctx, mappings, changed)
+      changed.select { |c| c[:query_uuid] }
+             .each_with_object({}) do |c, memo|
+               mapping = mappings.find { |m| m.dig(:query, :uuid) == c[:query_uuid] }
+               mapping[:query][:fields] = c[:attributes].keys
+               mapping[:record] = c[:klass].new(id: c[:id])
+               mapping[:record].assign_attributes(c[:attributes])
+               result = DeepUnrest.serialize_result(ctx, mapping)
+               DeepUnrest.set_attr(memo, mapping[:addr], result)
+             end
+    end
+
     def self.write(ctx, params, user)
       temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
         '@@temp_ids'
@@ -131,9 +144,15 @@ module DeepUnrest
         destroyed = DeepUnrest::ApplicationController.class_variable_get(
           '@@destroyed_entities'
         )
+
+        changed = DeepUnrest::ApplicationController.class_variable_get(
+          '@@changed_entities'
+        )
+
         return {
           temp_ids: temp_id_map[ctx[:uuid]],
-          destroyed: destroyed
+          destroyed: destroyed,
+          changed: serialize_changes(ctx, mappings, changed)
         }
       end
 

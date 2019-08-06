@@ -30,8 +30,19 @@ class WriteTest < ActionDispatch::IntegrationTest
 
     patch '/deep_unrest/write', auth_xhr_req(body, user)
 
+    resp = format_response
+
     survey.reload
 
     assert survey.approved
+    assert_equal resp[:changed], {
+      survey: {
+        id: survey.id.to_s,
+        type: 'surveys',
+        attributes: {
+          approved: true
+        }
+      }
+    }
   end
 end

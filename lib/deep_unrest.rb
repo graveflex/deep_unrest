@@ -168,7 +168,7 @@ module DeepUnrest
            end
 
     p.parse_params({ attributes: attributes }, opts)[:attributes]
-  rescue JSONAPI::Exceptions::ParametersNotAllowed
+  rescue JSONAPI::Exceptions::ParameterNotAllowed
     unpermitted_keys = attributes.keys.map(&:to_sym) - opts
     msg = "Attributes #{unpermitted_keys} of #{type.classify} not allowed"
     msg += " to #{user.class} with id '#{user.id}'" if user
@@ -660,5 +660,17 @@ module DeepUnrest
     mappings.each do |mapping|
       mapping[:scope] = DeepUnrest.authorization_strategy.get_authorized_scope(user, mapping[:klass])
     end
+  end
+
+  def self.serialize_result(ctx, item)
+    # item[:resource].exclude_links :none
+    resource_instance = item[:resource].new(item[:record], ctx)
+    JSONAPI::ResourceSerializer.new(
+      item[:resource],
+      fields: {
+        "#{item[:key].pluralize}": item[:query][:fields].map(&:underscore)
+                                                        .map(&:to_sym)
+      }
+    ).serialize_to_hash(resource_instance)[:data]
   end
 end

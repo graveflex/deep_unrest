@@ -7,6 +7,7 @@ module DeepUnrest
 
       included do
         attr_accessor :deep_unrest_context
+        attr_accessor :deep_unrest_query_uuid
         attr_accessor :deep_unrest_temp_id
         after_create :map_temp_id
         after_destroy :track_destruction
@@ -49,7 +50,8 @@ module DeepUnrest
         changed << {
           klass: self.class,
           id: pk,
-          attributes: attribute_diff
+          attributes: attribute_diff,
+          query_uuid: @deep_unrest_query_uuid
         }
       end
 
