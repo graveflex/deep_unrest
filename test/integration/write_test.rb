@@ -30,6 +30,8 @@ class WriteTest < ActionDispatch::IntegrationTest
 
     patch '/deep_unrest/write', auth_xhr_req(body, user)
 
+    survey.reload
+
     assert survey.approved
   end
 end

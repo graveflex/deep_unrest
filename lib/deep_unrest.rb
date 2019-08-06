@@ -16,7 +16,7 @@ module ActiveRecord
                                                new_record,
                                                autosave)
       if new_record || autosave
-        association && association.target
+        association&.target
       else
         association.target.find_all(&:new_record?)
       end
@@ -397,7 +397,7 @@ module DeepUnrest
   def self.build_mutation_body(ops, scopes, user)
     err_path_memo = {}
     ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
-      memo.deep_merge!(build_mutation_fragment(op, scopes, user, err_path_memo)) do |key, a, b|
+      memo.deep_merge!(build_mutation_fragment(op, scopes, user, err_path_memo)) do |_key, a, b|
         if a.is_a? Array
           combine_arrays(a, b)
         else
@@ -546,7 +546,39 @@ module DeepUnrest
     DeepUnrest::Write.write(ctx, params, user)
   end
 
-  def self.perform_update(ctx, params)
+  def self.serialize_changes(diffs, user)
+    ctx = { current_user: user }
+    diffs.each do |diff|
+      diff[:resource] = diff[:attributes]
+      pk = diff[:klass].primary_key
+      diff[:resource][pk] = diff[:id]
+      diff[:model] = diff[:klass].new(diff[:resource])
+    end
+
+    allowed_models = diffs.select do |diff|
+      scope = DeepUnrest.authorization_strategy
+                        .get_authorized_scope(user,
+                                              diff[:klass])
+      scope.exists?(diff[:id])
+    rescue NameError
+      false
+    end
+
+    resources = allowed_models.map do |diff|
+      resource_klass = get_resource(diff[:klass].to_s)
+      fields = {}
+      keys = diff[:resource].keys.map(&:to_sym)
+      fields[to_assoc(diff[:klass].to_s.pluralize)] = keys
+
+      JSONAPI::ResourceSerializer.new(
+        resource_klass,
+        fields: fields
+      ).serialize_to_hash(resource_klass.new(diff[:model], ctx))[:data]
+    end
+    resources.select { |item| item.dig('attributes') }.compact
+  end
+
+  def self.perform_update(ctx, params, user)
     temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
       '@@temp_ids'
     )
@@ -586,10 +618,18 @@ module DeepUnrest
       destroyed = DeepUnrest::ApplicationController.class_variable_get(
         '@@destroyed_entities'
       )
+
+      changed = DeepUnrest::ApplicationController.class_variable_get(
+        '@@changed_entities'
+      )
+
+      diff = serialize_changes(changed, user)
+
       return {
         redirect_regex: build_redirect_regex(temp_id_map[uuid]),
         temp_ids: temp_id_map[uuid],
-        destroyed: destroyed
+        destroyed: destroyed,
+        changed: diff
       }
     end
 

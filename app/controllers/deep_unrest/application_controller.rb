@@ -4,8 +4,11 @@ module DeepUnrest
   class ApplicationController < ActionController::API
     include DeepUnrest.authentication_concern
 
+    around_action :allow_nested_arrays, only: :update
+
     @@temp_ids = {}
     @@destroyed_entities = []
+    @@changed_entities = []
 
     def context
       { current_user: current_user }
@@ -75,8 +78,9 @@ module DeepUnrest
 
       instance_eval &DeepUnrest.before_update if DeepUnrest.before_update
 
-      results = DeepUnrest.perform_update(context, data)
+      results = DeepUnrest.perform_update(context, data, current_user)
       resp = { destroyed: results[:destroyed],
+               changed: results[:changed],
                tempIds: results[:temp_ids] }
       resp[:redirect] = results[:redirect_regex].call(redirect) if redirect
       render json: resp, status: :ok
@@ -88,6 +92,8 @@ module DeepUnrest
       render json: err.message, status: :conflict
     ensure
       @@temp_ids.delete(request.uuid)
+      @@destroyed_entities.clear
+      @@changed_entities.clear
     end
 
     def current_user
@@ -100,6 +106,12 @@ module DeepUnrest
                                   :path,
                                   :errorPath,
                                   { attributes: {} }]])
+    end
+
+    def allow_nested_arrays
+      ::ActionController::Parameters::PERMITTED_SCALAR_TYPES << Array
+      yield
+      ::ActionController::Parameters::PERMITTED_SCALAR_TYPES - [Array]
     end
   end
 end

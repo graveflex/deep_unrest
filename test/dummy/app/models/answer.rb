@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Answer < ApplicationRecord
+  include TrackActivity
   belongs_to :question
   belongs_to :survey, required: false
   belongs_to :applicant, required: false
