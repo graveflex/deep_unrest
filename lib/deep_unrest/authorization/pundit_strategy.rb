@@ -31,9 +31,12 @@ module DeepUnrest
       def self.get_entity_authorization(scope, user)
         if %i[create update_all index destroy_all].include?(scope[:scope_type])
           target = scope[:klass]
-        else
+        elsif scope[:scope]
+          # TODO: deprecate this part of the clause following write endpoint refactor
           target = scope[:scope][:base].send(scope[:scope][:method],
                                              *scope[:scope][:arguments])
+        else
+          target = scope[:klass].find(scope[:query][:id])
         end
 
         Pundit.policy!(user, target).send(get_policy_name(scope[:scope_type]))

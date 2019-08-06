@@ -2,10 +2,6 @@
 
 module DeepUnrest
   module Read
-    # def self.map_included(params, addr)
-    # params[:include].map { |k, v| create_read_mappings({ "#{k}": v }, [*addr, :include]) }
-    # end
-
     def self.create_read_mappings(params, addr = [])
       return unless params
       params.map do |k, v|
@@ -19,7 +15,7 @@ module DeepUnrest
            addr: resource_addr,
            key: k.camelize(:lower),
            uuid: uuid,
-           query: deep_underscore_keys(v) },
+           query: DeepUnrest.deep_underscore_keys(v) },
          *create_read_mappings(v[:include], [*resource_addr, :include])]
       end.flatten.compact
     end
@@ -38,21 +34,6 @@ module DeepUnrest
     def self.serialize_results(ctx, data)
       data.each do |item|
         item[:serialized_result] = serialize_result(ctx, item)
-      end
-    end
-
-    def self.deep_underscore_keys(query)
-      query.deep_transform_keys! do |key|
-        k = begin
-              key.to_s.underscore
-            rescue StandardError
-              key
-            end
-        begin
-          k.to_sym
-        rescue StandardError
-          key
-        end
       end
     end
 
@@ -184,42 +165,13 @@ module DeepUnrest
       [included, meta]
     end
 
-    def self.set_attr(hash, path, val, cursor = nil)
-      cursor ||= hash
-      key = path.shift
-
-      if path.empty?
-        case cursor
-        when Array
-          cursor << val
-        when Hash
-          cursor[key] = val
-        end
-        return hash
-      end
-
-      next_cursor = case key
-                    when /\[\]$/
-                      cursor[key.gsub('[]', '')] ||= []
-                    else
-                      cursor[key] ||= {}
-                    end
-
-      set_attr(hash, path, val, next_cursor)
-    end
 
     def self.format_response(mappings)
       response = {}
       mappings.each do |mapping|
-        set_attr(response, mapping[:addr], mapping[:serialized_result])
+        DeepUnrest.set_attr(response, mapping[:addr], mapping[:serialized_result])
       end
       response
-    end
-
-    def self.collect_authorized_scopes(mappings, user)
-      mappings.each do |mapping|
-        mapping[:scope] = DeepUnrest.authorization_strategy.get_authorized_scope(user, mapping[:klass])
-      end
     end
 
     def self.read(ctx, params, user)
@@ -227,10 +179,10 @@ module DeepUnrest
       mappings = create_read_mappings(params.to_unsafe_h)
 
       # authorize user for requested scope(s)
-      DeepUnrest.authorization_strategy.authorize(mappings, user).flatten
+      DeepUnrest.authorization_strategy.authorize(mappings, user)
 
       # collect authorized scopes
-      collect_authorized_scopes(mappings, user)
+      DeepUnrest.collect_authorized_scopes(mappings, user)
 
       # read data
       data, meta = execute_queries(mappings)

@@ -2,6 +2,7 @@
 
 require 'deep_unrest/engine'
 require 'deep_unrest/read'
+require 'deep_unrest/write'
 
 # workaronud for rails bug with association indices.
 # see https://github.com/rails/rails/pull/24728
@@ -213,6 +214,7 @@ module DeepUnrest
 
   def self.parse_id(id_str)
     return false if id_str.nil?
+    return id_str if id_str.is_a? Integer
     id_match = id_str.match(/^\.?(?<id>[\w\-]+)$/)
     id_match && id_match[:id]
   end
@@ -368,6 +370,30 @@ module DeepUnrest
     (non_dupes + merged).flatten
   end
 
+  def self.set_attr(hash, path, val, cursor = nil)
+    cursor ||= hash
+    key = path.shift
+
+    if path.empty?
+      case cursor
+      when Array
+        cursor << val
+      when Hash
+        cursor[key] = val
+      end
+      return hash
+    end
+
+    next_cursor = case key
+                  when /\[\]$/
+                    cursor[key.gsub('[]', '')] ||= []
+                  else
+                    cursor[key] ||= {}
+                  end
+
+    set_attr(hash, path, val, next_cursor)
+  end
+
   def self.build_mutation_body(ops, scopes, user)
     err_path_memo = {}
     ops.each_with_object(HashWithIndifferentAccess.new({})) do |op, memo|
@@ -516,6 +542,10 @@ module DeepUnrest
     DeepUnrest::Read.read(ctx, params, user)
   end
 
+  def self.perform_write(ctx, params, user)
+    DeepUnrest::Write.write(ctx, params, user)
+  end
+
   def self.perform_update(ctx, params)
     temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
       '@@temp_ids'
@@ -568,5 +598,27 @@ module DeepUnrest
 
     # raise error if there are any errors
     raise Conflict, formatted_errors.to_json unless formatted_errors.empty?
+  end
+
+  ### SHARED ###
+  def self.deep_underscore_keys(query)
+    query.deep_transform_keys! do |key|
+      k = begin
+            key.to_s.underscore
+          rescue StandardError
+            key
+          end
+      begin
+        k.to_sym
+      rescue StandardError
+        key
+      end
+    end
+  end
+
+  def self.collect_authorized_scopes(mappings, user)
+    mappings.each do |mapping|
+      mapping[:scope] = DeepUnrest.authorization_strategy.get_authorized_scope(user, mapping[:klass])
+    end
   end
 end

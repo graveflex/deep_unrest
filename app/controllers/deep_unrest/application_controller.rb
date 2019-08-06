@@ -38,7 +38,32 @@ module DeepUnrest
       instance_eval &DeepUnrest.before_read if DeepUnrest.before_read
 
       results = DeepUnrest.perform_read(context, data, current_user)
-      render json: results, status: 200
+      render json: results, status: :ok
+    rescue DeepUnrest::Unauthorized => err
+      render json: err.message, status: :forbidden
+    rescue DeepUnrest::UnpermittedParams => err
+      render json: err.message, status: :method_not_allowed
+    end
+
+    def write
+      repaired_params = params[:data]
+      data = repaired_params[:data]
+      context = repaired_params[:context] || {}
+      context[:uuid] = request.uuid
+      context[:current_user] = current_user
+
+      instance_eval &DeepUnrest.before_update if DeepUnrest.before_update
+
+      results = DeepUnrest.perform_write(context, data, current_user)
+      render json: results, status: :ok
+    rescue DeepUnrest::Unauthorized => err
+      render json: err.message, status: :forbidden
+    rescue DeepUnrest::UnpermittedParams => err
+      render json: err.message, status: :method_not_allowed
+    rescue DeepUnrest::Conflict => err
+      render json: err.message, status: :conflict
+    ensure
+      @@temp_ids.delete(request.uuid)
     end
 
     def update
@@ -54,13 +79,13 @@ module DeepUnrest
       resp = { destroyed: results[:destroyed],
                tempIds: results[:temp_ids] }
       resp[:redirect] = results[:redirect_regex].call(redirect) if redirect
-      render json: resp, status: 200
+      render json: resp, status: :ok
     rescue DeepUnrest::Unauthorized => err
-      render json: err.message, status: 403
+      render json: err.message, status: :forbidden
     rescue DeepUnrest::UnpermittedParams => err
-      render json: err.message, status: 405
+      render json: err.message, status: :method_not_allowed
     rescue DeepUnrest::Conflict => err
-      render json: err.message, status: 409
+      render json: err.message, status: :conflict
     ensure
       @@temp_ids.delete(request.uuid)
     end
