@@ -41,6 +41,37 @@ module DeepUnrest
       end
     end
 
+    def self.authorize_attributes(mappings, ctx)
+      unauthorized_items = []
+
+      mappings.reject { |m| m[:scope_type] == :show }
+              .reject { |m| m[:destroy] }
+              .each do |item|
+        attributes = item.dig(:query, :attributes) || {}
+        resource = item[:resource]
+        p = JSONAPI::RequestParser.new
+        p.resource_klass = resource
+        opts = if item[:scope_type] == :create
+                 resource.creatable_fields(ctx)
+               else
+                 resource.updatable_fields(ctx)
+               end
+
+        p.parse_params({ attributes: attributes }, opts)[:attributes]
+      rescue JSONAPI::Exceptions::ParameterNotAllowed
+        unpermitted_keys = attributes.keys.map(&:to_sym) - opts
+        item[:errors] = unpermitted_keys.each_with_object({}) do |attr_key, memo|
+          memo[attr_key] = 'Unpermitted parameter'
+        end
+        unauthorized_items << item
+      end
+
+      return if unauthorized_items.blank?
+
+      msg = serialize_errors(unauthorized_items)
+      raise DeepUnrest::UnpermittedParams, msg
+    end
+
     def self.build_mutation_bodies(mappings)
       mappings.reject { |m| m[:scope_type] == :show }
               .each_with_object({}) do |item, memo|
@@ -110,6 +141,17 @@ module DeepUnrest
              end
     end
 
+    def self.serialize_errors(mappings)
+      { errors: mappings.each_with_object({}) do |item, memo|
+        err = {
+          id: item.dig(:query, :id),
+          type: item.dig(:query, :type),
+          attributes: item[:errors,]
+        }
+        DeepUnrest.set_attr(memo, [*item[:addr]], err)
+      end }.to_json
+    end
+
     def self.write(ctx, params, user)
       temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
         '@@temp_ids'
@@ -120,6 +162,8 @@ module DeepUnrest
 
       # authorize user for requested scope(s)
       DeepUnrest.authorization_strategy.authorize(mappings, user)
+
+      authorize_attributes(mappings, ctx)
 
       # collect authorized scopes
       # DeepUnrest.collect_authorized_scopes(mappings, user)

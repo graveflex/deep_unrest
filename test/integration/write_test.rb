@@ -10,7 +10,7 @@ class WriteTest < ActionDispatch::IntegrationTest
     SurveyResource.any_instance.unstub(:track_remove)
   end
 
-  test 'authorized users can make bulk updates to resources' do
+  test 'authorized users can update a resource' do
     user = admins(:one)
     survey = surveys(:one)
 
@@ -41,6 +41,41 @@ class WriteTest < ActionDispatch::IntegrationTest
         type: 'surveys',
         attributes: {
           approved: true
+        }
+      }
+    }
+  end
+
+  test 'users cannot update un-allowed attributes' do
+    user = applicants(:one)
+    survey = surveys(:one)
+
+    body = {
+      data: {
+        survey: {
+          id: survey.id,
+          type: 'surveys',
+          attributes: {
+            approved: true,
+            name: Faker::TwinPeaks.location
+          }
+        }
+      }
+    }
+
+    patch '/deep_unrest/write', auth_xhr_req(body, user)
+
+    assert_response 405
+    resp = format_response
+
+    assert_equal resp, {
+      errors: {
+        survey: {
+          id: survey.id,
+          type: 'surveys',
+          attributes: {
+            approved: 'Unpermitted parameter'
+          }
         }
       }
     }
