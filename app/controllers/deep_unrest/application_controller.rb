@@ -74,7 +74,7 @@ module DeepUnrest
       context = allowed_write_params[:data][:context] || {}
       context[:uuid] = request.uuid
       context[:current_user] = current_user
-      data = repair_nested_params(allowed_write_params)[:data][:data]
+      data = repair_nested_params(params)[:data][:data]
 
       instance_eval &DeepUnrest.before_update if DeepUnrest.before_update
 
