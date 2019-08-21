@@ -375,6 +375,7 @@ module DeepUnrest
   def self.set_attr(hash, path, val, cursor = nil)
     cursor ||= hash
     key = path.shift
+    key = key.to_i if cursor.is_a? Array
 
     if path.empty?
       case cursor

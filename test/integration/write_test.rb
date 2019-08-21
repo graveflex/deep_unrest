@@ -86,7 +86,6 @@ class WriteTest < ActionDispatch::IntegrationTest
     q2 = questions(:two)
     a1 = answers(:one)
     a2 = answers(:two)
-    a2_attachments = a2.attachments
     a1_val = Faker::TwinPeaks.quote
     new_a_val = Faker::TwinPeaks.quote
 
@@ -171,6 +170,96 @@ class WriteTest < ActionDispatch::IntegrationTest
                                  applicantId: user.id,
                                  surveyId: survey.id,
                                  questionId: q1.id
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ]
+                   }
+                 }
+  end
+
+  test 'validation errors are labeled with the correct path' do
+    user = applicants(:one)
+    survey = surveys(:one)
+    survey_path = "surveys.#{survey.id}"
+    q1 = questions(:one)
+    q1_path = "questions.#{q1.id}"
+    a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
+
+    body = {
+      data: {
+        survey: {
+          id: survey.id,
+          attributes: {
+            name: nil
+          },
+          include: {
+            questions: [
+              {
+                id: q1.id,
+                include: {
+                  answers: [
+                    {
+                      id: '[1]',
+                      attributes: {
+                        surveyId: survey.id,
+                        value: a1_val,
+                        applicantId: user.id,
+                        questionId: q1.id
+                      }
+                    },
+                    {
+                      id: '[2]',
+                      attributes: {
+                        surveyId: survey.id,
+                        value: Faker::TwinPeaks.quote,
+                        applicantId: user.id,
+                        questionId: q1.id
+                      }
+                    },
+                    {
+                      id: '[3]',
+                      attributes: {
+                        surveyId: survey.id,
+                        value: a2_val,
+                        applicantId: user.id,
+                        questionId: q1.id
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+
+    patch '/deep_unrest/write', auth_xhr_req(body, user)
+    resp = format_response
+
+    assert_equal resp[:errors],
+                 survey: {
+                   attributes: {
+                     name: ["can't be blank"]
+                   },
+                   included: {
+                     questions: [
+                       {
+                         included: {
+                           answers: [
+                             {
+                               attributes: {
+                                 value: ['is invalid']
+                               }
+                             },
+                             nil,
+                             {
+                               attributes: {
+                                 value: ['is invalid']
                                }
                              }
                            ]

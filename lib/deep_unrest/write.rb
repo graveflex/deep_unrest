@@ -143,6 +143,7 @@ module DeepUnrest
                      end
                    end
 
+          item[:record] = record
           result = { record: record }
           if item[:temp_id]
             result[:temp_ids] = {}
@@ -198,6 +199,31 @@ module DeepUnrest
       end }.to_json
     end
 
+    def self.format_ar_error_path(base, ar_path)
+      path_arr = ar_path.gsub(/\.(?!\w+$)/, '.included.')
+                        .gsub(/\.(?=\w+$)/, '.attributes.\1')
+                        .gsub(/\[(\d+)\]/, '[].\1')
+                        .split('.')
+
+      if path_arr.size == 1
+        path_arr.unshift('attributes')
+      elsif path_arr.size > 1
+        path_arr.unshift('included')
+      end
+
+      [*base, *path_arr]
+    end
+
+    def self.map_ar_errors_to_param_keys(mappings)
+      mappings
+        .each_with_object({}) do |item, memo|
+          item[:record]&.errors&.messages&.each do |ar_path, msg|
+            err_path = format_ar_error_path(item[:addr], ar_path.to_s)
+            DeepUnrest.set_attr(memo, err_path, msg)
+          end
+        end
+    end
+
     def self.write(ctx, params, user)
       temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
         '@@temp_ids'
@@ -248,7 +274,7 @@ module DeepUnrest
       end
 
       # map errors to their sources
-      formatted_errors = { errors: map_errors_to_param_keys(scopes, errors) }
+      formatted_errors = { errors: map_ar_errors_to_param_keys(mappings) }
 
       # raise error if there are any errors
       raise DeepUnrest::Conflict, formatted_errors.to_json
