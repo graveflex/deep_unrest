@@ -6,37 +6,60 @@ module DeepUnrest
       return :destroy if item[:destroy]
       return :show if item[:readOnly] || item[:attributes].blank?
       return :create if item[:id] && DeepUnrest.temp_id?(item[:id].to_s)
+
       :update
+    end
+
+    def self.create_write_mapping(k, v, addr, idx = nil)
+      path = k
+      path += '[]' if idx
+      resource_addr = [*addr, path]
+      resource_addr << idx if idx
+      uuid = SecureRandom.uuid
+      v[:uuid] = uuid
+      [{ klass: k.singularize.classify.constantize,
+         policy: "#{k.singularize.classify}Policy".constantize,
+         resource: "#{k.singularize.classify}Resource".constantize,
+         scope_type: get_scope_type(v),
+         addr: resource_addr,
+         key: k.camelize(:lower),
+         uuid: uuid,
+         query: v },
+       *create_write_mappings(v[:include], [*resource_addr, :include])]
+    end
+
+    def self.create_mapping_sequence(k, v, addr)
+      v.each_with_index.map do |item, idx|
+        create_write_mapping(k, item, addr, idx)
+      end
     end
 
     def self.create_write_mappings(params, addr = [])
       return unless params
+
       params.map do |k, v|
-        resource_addr = [*addr, k]
-        uuid = SecureRandom.uuid
-        v[:uuid] = uuid
-        [{ klass: k.singularize.classify.constantize,
-           policy: "#{k.singularize.classify}Policy".constantize,
-           resource: "#{k.singularize.classify}Resource".constantize,
-           scope_type: get_scope_type(v),
-           addr: resource_addr,
-           key: k.camelize(:lower),
-           uuid: uuid,
-           query: DeepUnrest.deep_underscore_keys(v) },
-         *create_write_mappings(v[:included], [*resource_addr, :include])]
+        if v.is_a? Array
+          create_mapping_sequence(k, v, addr)
+        else
+          create_write_mapping(k, v, addr)
+        end
       end.flatten.compact
     end
 
     def self.append_ar_paths(mappings)
       mappings.each do |item|
         item[:ar_addr] = []
-        item[:addr].each_with_index do |segment, i|
-          next if segment == :include
-          item[:ar_addr] << if item[:addr][i - 1] == :include
-                              "#{segment}_attributes".to_sym
-                            else
-                              segment
-                            end
+        addr = [*item[:addr]]
+        until addr.empty?
+          segment = addr.shift
+          item[:ar_addr] << segment if item[:ar_addr].empty?
+          next unless segment == :include
+
+          next_segment = "#{addr.shift.gsub('[]', '')}_attributes"
+          idx = addr.shift if addr[0].is_a? Integer
+          next_segment += '[]' if idx
+          item[:ar_addr] << next_segment
+          item[:ar_addr] << idx if idx
         end
       end
     end
@@ -73,18 +96,19 @@ module DeepUnrest
     end
 
     def self.build_mutation_bodies(mappings)
-      mappings.reject { |m| m[:scope_type] == :show }
-              .each_with_object({}) do |item, memo|
+      mappings.each_with_object({}) do |item, memo|
         # TODO: use pkey instead of "id"
-        next_attrs = item.dig(:query, :attributes || {})
-                         .deep_symbolize_keys
+        next_attrs = (item.dig(:query, :attributes) || {})
+                     .deep_symbolize_keys
         update_body = { id: item.dig(:query, :id),
                         deep_unrest_query_uuid: item.dig(:query, :uuid),
-                        **next_attrs }
+                        **DeepUnrest.deep_underscore_keys(next_attrs) }
         update_body[:_destroy] = true if item[:scope_type] == :destroy
         DeepUnrest.set_attr(memo, item[:ar_addr].clone, update_body)
-
-        item[:mutate] = memo.fetch(*item[:ar_addr]) if item[:ar_addr].size == 1
+        if item[:ar_addr].size == 1
+          item[:mutate] = memo.fetch(*item[:ar_addr])
+          item[:scope_type] = :update if item[:scope_type] == :show
+        end
       end
     end
 
@@ -141,6 +165,28 @@ module DeepUnrest
              end
     end
 
+    def self.addr_to_lodash_path(path_arr)
+      lodash_path = []
+      until path_arr.empty?
+        segment = path_arr.shift
+        if segment.match(/\[\]$/)
+          idx = path_arr.shift
+          segment = "#{segment.gsub('[]', '')}[#{idx}]"
+        end
+        lodash_path << segment
+      end
+      lodash_path.join('.')
+    end
+
+    def self.serialize_destroyed(_ctx, mappings, destroyed)
+      destroyed.select { |d| d[:query_uuid] }
+               .map do |d|
+        mapping = mappings.find { |m| m.dig(:query, :uuid) == d[:query_uuid] }
+        lodash_path = addr_to_lodash_path(mapping[:addr])
+        { id: d[:id], path: lodash_path, type: mapping[:key].pluralize }
+      end
+    end
+
     def self.serialize_errors(mappings)
       { errors: mappings.each_with_object({}) do |item, memo|
         err = {
@@ -156,6 +202,7 @@ module DeepUnrest
       temp_id_map = DeepUnrest::ApplicationController.class_variable_get(
         '@@temp_ids'
       )
+      temp_id_map[ctx[:uuid]] ||= {}
 
       # create mappings for assembly / disassembly
       mappings = create_write_mappings(params.to_unsafe_h)
@@ -173,7 +220,7 @@ module DeepUnrest
       build_mutation_bodies(mappings)
 
       # convert temp_ids from ids to non-activerecord attributes
-      DeepUnrest.convert_temp_ids!(ctx[:uuid], mappings)
+      DeepUnrest.convert_temp_ids!(ctx[:uuid], mappings.select { |m| m[:mutate] })
 
       # save data, run callbaks
       results = execute_queries(mappings, ctx)
@@ -195,7 +242,7 @@ module DeepUnrest
 
         return {
           temp_ids: temp_id_map[ctx[:uuid]],
-          destroyed: destroyed,
+          destroyed: serialize_destroyed(ctx, mappings, destroyed),
           changed: serialize_changes(ctx, mappings, changed)
         }
       end

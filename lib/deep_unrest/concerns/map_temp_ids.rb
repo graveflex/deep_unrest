@@ -36,7 +36,8 @@ module DeepUnrest
         destroyed << {
           type: self.class.to_s.pluralize.camelize(:lower),
           id: pk,
-          destroyed: true
+          destroyed: true,
+          query_uuid: @deep_unrest_query_uuid
         }
       end
 

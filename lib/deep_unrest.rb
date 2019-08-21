@@ -319,6 +319,8 @@ module DeepUnrest
       mutations.map { |val| convert_temp_ids!(ctx, val) }
     end
     mutations
+  rescue Exception => e
+    binding.pry
   end
 
   def self.build_mutation_fragment(op, scopes, user, err_path_memo, rest = nil, memo = nil, cursor = nil, type = nil)
@@ -377,7 +379,7 @@ module DeepUnrest
     if path.empty?
       case cursor
       when Array
-        cursor << val
+        cursor[key] = val
       when Hash
         cursor[key] = val
       end
