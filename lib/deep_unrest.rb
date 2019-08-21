@@ -115,8 +115,10 @@ module DeepUnrest
 
   def self.validate_association(parent, type)
     return unless parent
+
     reflection = parent[:klass].reflect_on_association(to_assoc(type))
     raise NoMethodError unless reflection.klass == to_class(type)
+
     unless parent[:id]
       raise InvalidParentScope, 'Unable to update associations of collections '\
                                 "('#{parent[:type]}.#{type}')."
@@ -147,6 +149,7 @@ module DeepUnrest
     unless result.map { |res| res.join('') }.join('.') == path
       raise InvalidPath, "Invalid path: #{path}"
     end
+
     result
   end
 
@@ -215,6 +218,7 @@ module DeepUnrest
   def self.parse_id(id_str)
     return false if id_str.nil?
     return id_str if id_str.is_a? Integer
+
     id_match = id_str.match(/^\.?(?<id>[\w\-]+)$/)
     id_match && id_match[:id]
   end
@@ -222,6 +226,7 @@ module DeepUnrest
   def self.increment_error_indices(path_info, memo)
     path_info.each_with_index.map do |(type, id), i|
       next if i.zero?
+
       parent_type, parent_id = path_info[i - 1]
       key = "#{parent_type}#{parent_id}#{type}"
       memo[key] = [] unless memo[key]
@@ -631,7 +636,7 @@ module DeepUnrest
       return {
         redirect_regex: build_redirect_regex(temp_id_map[uuid]),
         temp_ids: temp_id_map[uuid],
-        destroyed: destroyed,
+        destroyed: destroyed.map { |d| d.except(:query_uuid) },
         changed: diff
       }
     end
