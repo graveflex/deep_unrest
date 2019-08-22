@@ -94,41 +94,47 @@ class WriteTest < ActionDispatch::IntegrationTest
         survey: {
           id: survey.id,
           include: {
-            questions: [
-              {
-                id: q2.id,
-                include: {
-                  answers: [
-                    {
-                      id: a2.id,
-                      destroy: true
+            questions: {
+              data: [
+                {
+                  id: q2.id,
+                  include: {
+                    answers: {
+                      data: [
+                        {
+                          id: a2.id,
+                          destroy: true
+                        }
+                      ]
                     }
-                  ]
-                }
-              },
-              {
-                id: q1.id,
-                include: {
-                  answers: [
-                    {
-                      id: a1.id,
-                      attributes: {
-                        value: a1_val
-                      }
-                    },
-                    {
-                      id: '[1]',
-                      attributes: {
-                        value: new_a_val,
-                        applicantId: user.id,
-                        surveyId: survey.id,
-                        questionId: q1.id
-                      }
+                  }
+                },
+                {
+                  id: q1.id,
+                  include: {
+                    answers: {
+                      data: [
+                        {
+                          id: a1.id,
+                          attributes: {
+                            value: a1_val
+                          }
+                        },
+                        {
+                          id: '[1]',
+                          attributes: {
+                            value: new_a_val,
+                            applicantId: user.id,
+                            surveyId: survey.id,
+                            questionId: q1.id
+                          }
+                        }
+                      ]
                     }
-                  ]
+                  }
                 }
-              }
-            ]
+              ]
+            }
           }
         }
       }
@@ -142,7 +148,7 @@ class WriteTest < ActionDispatch::IntegrationTest
     assert_equal resp[:destroyed], [
       { type: 'answers',
         id: a2.id,
-        path: 'survey.include.questions[0].include.answers[0]' }
+        path: 'survey.include.questions.data[0].include.answers.data[0]' }
     ]
 
     assert_equal resp[:temp_ids], "[1]": new_answer.id
@@ -150,32 +156,36 @@ class WriteTest < ActionDispatch::IntegrationTest
     assert_equal resp[:changed],
                  survey: {
                    include: {
-                     questions: [
-                       nil,
-                       {
-                         include: {
-                           answers: [
-                             {
-                               id: a1.id.to_s,
-                               type: 'answers',
-                               attributes: {
-                                 value: a1_val
-                               }
-                             },
-                             {
-                               id: new_answer.id.to_s,
-                               type: 'answers',
-                               attributes: {
-                                 value: new_a_val,
-                                 applicantId: user.id,
-                                 surveyId: survey.id,
-                                 questionId: q1.id
-                               }
+                     questions: {
+                       data: [
+                         nil,
+                         {
+                           include: {
+                             answers: {
+                               data: [
+                                 {
+                                   id: a1.id.to_s,
+                                   type: 'answers',
+                                   attributes: {
+                                     value: a1_val
+                                   }
+                                 },
+                                 {
+                                   id: new_answer.id.to_s,
+                                   type: 'answers',
+                                   attributes: {
+                                     value: new_a_val,
+                                     applicantId: user.id,
+                                     surveyId: survey.id,
+                                     questionId: q1.id
+                                   }
+                                 }
+                               ]
                              }
-                           ]
+                           }
                          }
-                       }
-                     ]
+                       ]
+                     }
                    }
                  }
   end
@@ -197,42 +207,46 @@ class WriteTest < ActionDispatch::IntegrationTest
             name: nil
           },
           include: {
-            questions: [
-              {
-                id: q1.id,
-                include: {
-                  answers: [
-                    {
-                      id: '[1]',
-                      attributes: {
-                        surveyId: survey.id,
-                        value: a1_val,
-                        applicantId: user.id,
-                        questionId: q1.id
-                      }
-                    },
-                    {
-                      id: '[2]',
-                      attributes: {
-                        surveyId: survey.id,
-                        value: Faker::TwinPeaks.quote,
-                        applicantId: user.id,
-                        questionId: q1.id
-                      }
-                    },
-                    {
-                      id: '[3]',
-                      attributes: {
-                        surveyId: survey.id,
-                        value: a2_val,
-                        applicantId: user.id,
-                        questionId: q1.id
-                      }
+            questions: {
+              data: [
+                {
+                  id: q1.id,
+                  include: {
+                    answers: {
+                      data: [
+                        {
+                          id: '[1]',
+                          attributes: {
+                            surveyId: survey.id,
+                            value: a1_val,
+                            applicantId: user.id,
+                            questionId: q1.id
+                          }
+                        },
+                        {
+                          id: '[2]',
+                          attributes: {
+                            surveyId: survey.id,
+                            value: Faker::TwinPeaks.quote,
+                            applicantId: user.id,
+                            questionId: q1.id
+                          }
+                        },
+                        {
+                          id: '[3]',
+                          attributes: {
+                            surveyId: survey.id,
+                            value: a2_val,
+                            applicantId: user.id,
+                            questionId: q1.id
+                          }
+                        }
+                      ]
                     }
-                  ]
+                  }
                 }
-              }
-            ]
+              ]
+            }
           }
         }
       }
@@ -247,25 +261,29 @@ class WriteTest < ActionDispatch::IntegrationTest
                      name: ["can't be blank"]
                    },
                    included: {
-                     questions: [
-                       {
-                         included: {
-                           answers: [
-                             {
-                               attributes: {
-                                 value: ['is invalid']
-                               }
-                             },
-                             nil,
-                             {
-                               attributes: {
-                                 value: ['is invalid']
-                               }
+                     questions: {
+                       data: [
+                         {
+                           included: {
+                             answers: {
+                               data: [
+                                 {
+                                   attributes: {
+                                     value: ['is invalid']
+                                   }
+                                 },
+                                 nil,
+                                 {
+                                   attributes: {
+                                     value: ['is invalid']
+                                   }
+                                 }
+                               ]
                              }
-                           ]
+                           }
                          }
-                       }
-                     ]
+                       ]
+                     }
                    }
                  }
   end

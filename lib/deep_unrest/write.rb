@@ -12,9 +12,8 @@ module DeepUnrest
 
     def self.create_write_mapping(k, v, addr, idx = nil)
       path = k
-      path += '[]' if idx
       resource_addr = [*addr, path]
-      resource_addr << idx if idx
+      resource_addr += ['data[]', idx] if idx
       uuid = SecureRandom.uuid
       v[:uuid] = uuid
       [{ klass: k.singularize.classify.constantize,
@@ -29,7 +28,7 @@ module DeepUnrest
     end
 
     def self.create_mapping_sequence(k, v, addr)
-      v.each_with_index.map do |item, idx|
+      v[:data].each_with_index.map do |item, idx|
         create_write_mapping(k, item, addr, idx)
       end
     end
@@ -38,7 +37,7 @@ module DeepUnrest
       return unless params
 
       params.map do |k, v|
-        if v.is_a? Array
+        if v[:data] && v[:data].is_a?(Array)
           create_mapping_sequence(k, v, addr)
         else
           create_write_mapping(k, v, addr)
@@ -55,7 +54,8 @@ module DeepUnrest
           item[:ar_addr] << segment if item[:ar_addr].empty?
           next unless segment == :include
 
-          next_segment = "#{addr.shift.gsub('[]', '')}_attributes"
+          next_segment = "#{addr.shift}_attributes"
+          addr.shift if addr[0].to_s == 'data[]'
           idx = addr.shift if addr[0].is_a? Integer
           next_segment += '[]' if idx
           item[:ar_addr] << next_segment
@@ -202,7 +202,7 @@ module DeepUnrest
     def self.format_ar_error_path(base, ar_path)
       path_arr = ar_path.gsub(/\.(?!\w+$)/, '.included.')
                         .gsub(/\.(?=\w+$)/, '.attributes.\1')
-                        .gsub(/\[(\d+)\]/, '[].\1')
+                        .gsub(/\[(\d+)\]/, '.data[].\1')
                         .split('.')
 
       if path_arr.size == 1
