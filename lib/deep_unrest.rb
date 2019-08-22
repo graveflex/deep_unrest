@@ -671,14 +671,12 @@ module DeepUnrest
   end
 
   def self.serialize_result(ctx, item)
-    # item[:resource].exclude_links :none
-    resource_instance = item[:resource].new(item[:record], ctx)
+    resource = item[:resource]
+    resource_instance = resource.new(item[:record], ctx)
+    fields = item[:query][:fields].map(&:underscore).map(&:to_sym)
     JSONAPI::ResourceSerializer.new(
-      item[:resource],
-      fields: {
-        "#{item[:key].pluralize}": item[:query][:fields].map(&:underscore)
-                                                        .map(&:to_sym)
-      }
+      resource,
+      fields: { "#{item[:key].underscore.pluralize}": fields }
     ).serialize_to_hash(resource_instance)[:data]
   end
 end
