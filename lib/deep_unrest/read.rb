@@ -77,7 +77,7 @@ module DeepUnrest
 
       included << result
 
-      recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :included])
+      recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :include])
     end
 
     def self.get_paginator(query, _parent)
@@ -130,7 +130,7 @@ module DeepUnrest
         }
 
         included << result
-        recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :included])
+        recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :include])
       end
     end
 
