@@ -102,12 +102,8 @@ module DeepUnrest
       resource = item[:resource]
 
       # monkey patch the resource to only show authorized records
-      def resource.records_base(_opts)
-        item[:scope]
-      end
-
-      # results = resource.find(query[:filter], paginator: paginator,
-                                              # sort_criteria: query[:sort])
+      r_metaclass = class << resource; self; end
+      r_metaclass.send(:define_method, :records) { |_ctx| item[:scope] }
 
       processor = JSONAPI::Processor.new(item[:resource],
                                          :find,

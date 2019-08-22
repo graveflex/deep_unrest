@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
                 'README.md']
 
   s.add_dependency 'rails', '~> 5.2.3'
-  s.add_dependency 'jsonapi-resources', '~> 0.9.0'
+  s.add_dependency 'jsonapi-resources', '~> 0.9.10'
 
   s.add_development_dependency 'sqlite3'
   s.add_development_dependency 'omniauth-github', '1.2.3'
