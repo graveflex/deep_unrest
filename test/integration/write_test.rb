@@ -260,11 +260,11 @@ class WriteTest < ActionDispatch::IntegrationTest
                    attributes: {
                      name: ["can't be blank"]
                    },
-                   included: {
+                   include: {
                      questions: {
                        data: [
                          {
-                           included: {
+                           include: {
                              answers: {
                                data: [
                                  {

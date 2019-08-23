@@ -200,7 +200,7 @@ module DeepUnrest
     end
 
     def self.format_ar_error_path(base, ar_path)
-      path_arr = ar_path.gsub(/\.(?!\w+$)/, '.included.')
+      path_arr = ar_path.gsub(/\.(?!\w+$)/, '.include.')
                         .gsub(/\.(?=\w+$)/, '.attributes.\1')
                         .gsub(/\[(\d+)\]/, '.data[].\1')
                         .split('.')
@@ -208,7 +208,7 @@ module DeepUnrest
       if path_arr.size == 1
         path_arr.unshift('attributes')
       elsif path_arr.size > 1
-        path_arr.unshift('included')
+        path_arr.unshift('include')
       end
 
       [*base, *path_arr]
