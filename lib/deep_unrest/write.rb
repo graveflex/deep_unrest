@@ -54,7 +54,7 @@ module DeepUnrest
           item[:ar_addr] << segment if item[:ar_addr].empty?
           next unless segment == :include
 
-          next_segment = "#{addr.shift}_attributes"
+          next_segment = "#{addr.shift.underscore}_attributes"
           addr.shift if addr[0].to_s == 'data[]'
           idx = addr.shift if addr[0].is_a? Integer
           next_segment += '[]' if idx
