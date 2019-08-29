@@ -105,6 +105,9 @@ module DeepUnrest
       r_metaclass = class << resource; self; end
       r_metaclass.send(:define_method, :records) { |_ctx| item[:scope] }
 
+      # transform sort value casing
+      query[:sort]&.each { |s| s[:field] = s[:field].underscore }
+
       processor = JSONAPI::Processor.new(item[:resource],
                                          :find,
                                          filters: query[:filter] || {},
