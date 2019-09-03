@@ -158,6 +158,7 @@ module DeepUnrest
       changed.select { |c| c[:query_uuid] }
              .each_with_object({}) do |c, memo|
                mapping = mappings.find { |m| m.dig(:query, :uuid) == c[:query_uuid] }
+               next unless mapping
                mapping[:query][:fields] = c[:attributes].keys
                mapping[:record] = c[:klass].new(id: c[:id])
                mapping[:record].assign_attributes(c[:attributes])
