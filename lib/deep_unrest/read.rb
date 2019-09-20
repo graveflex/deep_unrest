@@ -4,6 +4,7 @@ module DeepUnrest
   module Read
     def self.create_read_mappings(params, addr = [])
       return unless params
+
       params.map do |k, v|
         resource_addr = [*addr, k]
         uuid = SecureRandom.uuid
@@ -36,9 +37,11 @@ module DeepUnrest
       elsif query.is_a? Hash
         query.each do |k, v|
           next unless v.is_a? Hash
+
           if v[:from_context]
             name, attr = v[:from_context].split('.')
             next unless parent_context[name]
+
             query[k] = parent_context[name].send(attr.underscore)
           else
             resolve_conditions(v, parent_context)
@@ -50,6 +53,7 @@ module DeepUnrest
 
     def self.recurse_included_queries(item, mappings, parent_context, included, meta, addr)
       return unless item[:query].key?(:include)
+
       item[:query][:include].each do |_k, v|
         next_context = parent_context.clone
         next_context[item[:key].singularize] = item[:record]
@@ -61,6 +65,7 @@ module DeepUnrest
     def self.query_item(mapping, mappings, parent_context, included, meta, addr, _parent)
       query = resolve_conditions(mapping[:query].deep_dup, parent_context)
       raise DeepUnrest::InvalidQuery unless query[:id] || query[:find]
+
       record = if query.key?(:id)
                  mapping[:scope].find(query[:id]) if query.key?(:id)
                else
@@ -94,7 +99,7 @@ module DeepUnrest
 
     def self.query_list(item, mappings, parent_context, included, meta, addr, parent)
       base_query = item[:query].deep_dup
-      extension = base_query.dig(:extend, parent&.fetch(:record)&.id&.to_s) || {}
+      extension = base_query.dig(:extend, parent&.fetch(:record)&.id&.to_s&.underscore) || {}
       query = resolve_conditions(base_query.deep_merge(extension),
                                  parent_context)
 
@@ -105,13 +110,13 @@ module DeepUnrest
       r_metaclass = class << resource; self; end
       r_metaclass.send(:define_method, :records) { |_ctx| item[:scope] }
 
-      # transform sort value casing
-      query[:sort]&.each { |s| s[:field] = s[:field].underscore }
+      # transform sort value casing for rails
+      sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
 
       processor = JSONAPI::Processor.new(item[:resource],
                                          :find,
                                          filters: query[:filter] || {},
-                                         sort_criteria: query[:sort],
+                                         sort_criteria: sort_criteria,
                                          paginator: paginator)
 
       jsonapi_result = processor.process
@@ -121,6 +126,8 @@ module DeepUnrest
         serialized_result: {
           paginationParams: jsonapi_result.pagination_params,
           recordCount: jsonapi_result.record_count,
+          sort: query[:sort],
+          recordCount: jsonapi_result.record_count
         }
       }
 
@@ -139,6 +146,7 @@ module DeepUnrest
 
     def self.get_query_type(item)
       return :detail unless plural?(item[:key])
+
       :list
     end
 
@@ -156,7 +164,6 @@ module DeepUnrest
       end
       [included, meta]
     end
-
 
     def self.format_response(mappings)
       response = {}
