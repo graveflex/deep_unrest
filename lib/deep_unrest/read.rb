@@ -132,6 +132,14 @@ module DeepUnrest
         }
       }
 
+      # make sure to return empty array if no results are found for this node
+      if jsonapi_result.resources.empty?
+        meta << {
+          addr: [*addr, item[:key], 'data'],
+          serialized_result: []
+        }
+      end
+
       jsonapi_result.resources.each_with_index do |record, i|
         next_addr = [*addr, item[:key], 'data[]', i]
         result = {
