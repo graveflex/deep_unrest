@@ -127,7 +127,8 @@ module DeepUnrest
           paginationParams: jsonapi_result.pagination_params,
           recordCount: jsonapi_result.record_count,
           sort: query[:sort],
-          recordCount: jsonapi_result.record_count
+          paginate: query[:paginate],
+          filter: query[:filter]
         }
       }
 
