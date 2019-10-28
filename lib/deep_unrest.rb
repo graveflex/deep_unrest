@@ -650,9 +650,24 @@ module DeepUnrest
 
   ### SHARED ###
   def self.deep_underscore_keys(query)
-    query.deep_transform_keys! do |key|
+    query&.deep_transform_keys! do |key|
       k = begin
             key.to_s.underscore
+          rescue StandardError
+            key
+          end
+      begin
+        k.to_sym
+      rescue StandardError
+        key
+      end
+    end
+  end
+
+  def self.deep_camelize_keys(query)
+    query&.deep_transform_keys! do |key|
+      k = begin
+            key.to_s.camelize(:lower)
           rescue StandardError
             key
           end

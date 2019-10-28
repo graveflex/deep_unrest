@@ -128,7 +128,7 @@ module DeepUnrest
           recordCount: jsonapi_result.record_count,
           sort: query[:sort],
           paginate: query[:paginate],
-          filter: query[:filter]
+          filter: DeepUnrest.deep_camelize_keys(query[:filter])
         }
       }
 
