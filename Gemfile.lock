@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    deep_unrest (0.1.50)
+    deep_unrest (0.1.51)
       jsonapi-resources (~> 0.9.10)
       rails (~> 5.2.3)
 
