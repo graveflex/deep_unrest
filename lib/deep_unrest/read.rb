@@ -108,6 +108,8 @@ module DeepUnrest
 
       # monkey patch the resource to only show authorized records
       r_metaclass = class << resource; self; end
+      r_metaclass.send(:alias_method, :records_original, :records)
+      # TODO: find a way to do this that doesn't blow out the original :records method
       r_metaclass.send(:define_method, :records) { |_ctx| item[:scope] }
 
       # transform sort value casing for rails
@@ -120,6 +122,9 @@ module DeepUnrest
                                          paginator: paginator)
 
       jsonapi_result = processor.process
+
+      # un-monkey patch the resource :records method
+      r_metaclass.send(:alias_method, :records_original, :records)
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
