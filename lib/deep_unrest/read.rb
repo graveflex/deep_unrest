@@ -124,7 +124,7 @@ module DeepUnrest
       jsonapi_result = processor.process
 
       # un-monkey patch the resource :records method
-      r_metaclass.send(:alias_method, :records_original, :records)
+      r_metaclass.send(:alias_method, :records, :records_original)
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
