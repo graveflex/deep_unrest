@@ -66,6 +66,10 @@ module DeepUnrest
       query = resolve_conditions(mapping[:query].deep_dup, parent_context)
       raise DeepUnrest::InvalidQuery unless query[:id] || query[:find]
 
+      if query.key?(:if)
+        return unless query[:if][:attribute] == query[:if][:matches]
+      end
+
       record = if query.key?(:id)
                  mapping[:scope].find(query[:id]) if query.key?(:id)
                else
