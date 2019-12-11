@@ -120,20 +120,22 @@ module DeepUnrest
         item[:scope].merge(records_original(ctx))
       }
 
-      # transform sort value casing for rails
-      sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
+      begin
+        # transform sort value casing for rails
+        sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
 
-      processor = JSONAPI::Processor.new(resource,
-                                         :find,
-                                         filters: query[:filter] || {},
-                                         context: { current_user: item[:current_user] },
-                                         sort_criteria: sort_criteria,
-                                         paginator: paginator)
+        processor = JSONAPI::Processor.new(resource,
+                                          :find,
+                                          filters: query[:filter] || {},
+                                          context: { current_user: item[:current_user] },
+                                          sort_criteria: sort_criteria,
+                                          paginator: paginator)
 
-      jsonapi_result = processor.process
-
-      # un-monkey patch the resource :records method
-      r_metaclass.send(:alias_method, :records, :records_original)
+        jsonapi_result = processor.process
+      ensure
+        # un-monkey patch the resource :records method
+        r_metaclass.send(:alias_method, :records, :records_original)
+      end
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
