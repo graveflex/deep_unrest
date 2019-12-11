@@ -9,3 +9,4 @@ coverage/
 deep_unrest-*.gem
 tags
 tags.*
+*.DS_Store

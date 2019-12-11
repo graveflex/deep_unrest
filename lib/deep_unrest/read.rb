@@ -113,8 +113,9 @@ module DeepUnrest
       # monkey patch the resource to only show authorized records
       r_metaclass = class << resource; self; end
       r_metaclass.send(:alias_method, :records_original, :records)
-      # TODO: find a way to do this that doesn't blow out the original :records method
-      r_metaclass.send(:define_method, :records) { |_ctx| item[:scope] }
+      r_metaclass.send(:define_method, :records) { |_ctx|
+        item[:scope].merge(records_original)
+      }
 
       # transform sort value casing for rails
       sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
