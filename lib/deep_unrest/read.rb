@@ -2,7 +2,7 @@
 
 module DeepUnrest
   module Read
-    def self.create_read_mappings(params, addr = [])
+    def self.create_read_mappings(params, user, addr = [])
       return unless params
 
       params.map do |k, v|
@@ -16,8 +16,9 @@ module DeepUnrest
            addr: resource_addr,
            key: k.camelize(:lower),
            uuid: uuid,
+           current_user: user,
            query: DeepUnrest.deep_underscore_keys(v) },
-         *create_read_mappings(v[:include], [*resource_addr, :include])]
+         *create_read_mappings(v[:include], user, [*resource_addr, :include])]
       end.flatten.compact
     end
 
@@ -64,6 +65,7 @@ module DeepUnrest
 
     def self.query_item(mapping, mappings, parent_context, included, meta, addr, _parent)
       query = resolve_conditions(mapping[:query].deep_dup, parent_context)
+
       raise DeepUnrest::InvalidQuery unless query[:id] || query[:find]
 
       if query.key?(:if)
@@ -124,6 +126,7 @@ module DeepUnrest
       processor = JSONAPI::Processor.new(resource,
                                          :find,
                                          filters: query[:filter] || {},
+                                         context: { current_user: item[:current_user] },
                                          sort_criteria: sort_criteria,
                                          paginator: paginator)
 
@@ -195,7 +198,7 @@ module DeepUnrest
 
     def self.read(ctx, params, user)
       # create mappings for assembly / disassembly
-      mappings = create_read_mappings(params.to_unsafe_h)
+      mappings = create_read_mappings(params.to_unsafe_h, user)
 
       # authorize user for requested scope(s)
       DeepUnrest.authorization_strategy.authorize(mappings, user)

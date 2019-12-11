@@ -72,17 +72,17 @@ class ReadTest < ActionDispatch::IntegrationTest
 
   test 'original resource scope is preserved' do
     user = admins(:one)
-    stimpy = Applicant.create!(name: 'Stimpson J Cat',
-                               email: 'stimp@test.com',
-                               nickname: '_stimpy_',
-                               password: 'secret123',
-                               password_confirmation: 'secret123')
+    Applicant.create!(name: 'Stimpson J Cat',
+                      email: 'stimp@test.com',
+                      nickname: '_stimpy_',
+                      password: 'secret123',
+                      password_confirmation: 'secret123')
 
-    stimpy = Applicant.create!(name: 'Ren Hoek',
-                               email: 'ren@test.com',
-                               nickname: '_ren_',
-                               password: 'secret123',
-                               password_confirmation: 'secret123')
+    Applicant.create!(name: 'Ren Hoek',
+                      email: 'ren@test.com',
+                      nickname: '_ren_',
+                      password: 'secret123',
+                      password_confirmation: 'secret123')
 
     params = {
       applicants: {
@@ -106,17 +106,17 @@ class ReadTest < ActionDispatch::IntegrationTest
 
     create_attachments(survey, 30)
 
-    stimpy = Applicant.create!(name: 'Stimpson J Cat',
-                               email: 'stimp@test.com',
-                               nickname: '_stimpy_',
-                               password: 'secret123',
-                               password_confirmation: 'secret123')
+    Applicant.create!(name: 'Stimpson J Cat',
+                      email: 'stimp@test.com',
+                      nickname: '_stimpy_',
+                      password: 'secret123',
+                      password_confirmation: 'secret123')
 
-    stimpy = Applicant.create!(name: 'Ren Hoek',
-                               email: 'ren@test.com',
-                               nickname: '_ren_',
-                               password: 'secret123',
-                               password_confirmation: 'secret123')
+    Applicant.create!(name: 'Ren Hoek',
+                      email: 'ren@test.com',
+                      nickname: '_ren_',
+                      password: 'secret123',
+                      password_confirmation: 'secret123')
 
     params = {
       survey: {
