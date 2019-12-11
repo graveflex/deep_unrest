@@ -70,12 +70,53 @@ class ReadTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'original resource scope is preserved' do
+    user = admins(:one)
+    stimpy = Applicant.create!(name: 'Stimpson J Cat',
+                               email: 'stimp@test.com',
+                               nickname: '_stimpy_',
+                               password: 'secret123',
+                               password_confirmation: 'secret123')
+
+    stimpy = Applicant.create!(name: 'Ren Hoek',
+                               email: 'ren@test.com',
+                               nickname: '_ren_',
+                               password: 'secret123',
+                               password_confirmation: 'secret123')
+
+    params = {
+      applicants: {
+        fields: %w[name nickname]
+      }
+    }
+
+    get '/deep_unrest/read', auth_xhr_req({ data: params }, user, false)
+    resp = format_response
+
+    nicknames = resp[:applicants][:data].map { |a| a[:attributes][:nickname] }
+
+    refute nicknames.include? '_stimpy_'
+    assert nicknames.include? '_ren_'
+  end
+
   test 'nested associations are returned' do
     user = admins(:one)
     survey = surveys(:one)
     second_answer = survey.applicant.answers.last
 
     create_attachments(survey, 30)
+
+    stimpy = Applicant.create!(name: 'Stimpson J Cat',
+                               email: 'stimp@test.com',
+                               nickname: '_stimpy_',
+                               password: 'secret123',
+                               password_confirmation: 'secret123')
+
+    stimpy = Applicant.create!(name: 'Ren Hoek',
+                               email: 'ren@test.com',
+                               nickname: '_ren_',
+                               password: 'secret123',
+                               password_confirmation: 'secret123')
 
     params = {
       survey: {
@@ -125,6 +166,11 @@ class ReadTest < ActionDispatch::IntegrationTest
 
     assert_equal(survey.id, resp[:survey][:id].to_i)
 
-    # binding.pry
+    get '/applicants'
+    resp = format_response
+
+    nicknames = resp[:data].map { |a| a[:attributes][:nickname] }
+    refute nicknames.include? '_stimpy_'
+    assert nicknames.include? '_ren_'
   end
 end

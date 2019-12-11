@@ -113,14 +113,15 @@ module DeepUnrest
       # monkey patch the resource to only show authorized records
       r_metaclass = class << resource; self; end
       r_metaclass.send(:alias_method, :records_original, :records)
-      r_metaclass.send(:define_method, :records) { |_ctx|
-        item[:scope].merge(records_original)
+      # TODO: find a way to do this that doesn't blow out the original :records method
+      r_metaclass.define_singleton_method(:records) { |ctx|
+        item[:scope].merge(records_original(ctx))
       }
 
       # transform sort value casing for rails
       sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
 
-      processor = JSONAPI::Processor.new(item[:resource],
+      processor = JSONAPI::Processor.new(resource,
                                          :find,
                                          filters: query[:filter] || {},
                                          sort_criteria: sort_criteria,

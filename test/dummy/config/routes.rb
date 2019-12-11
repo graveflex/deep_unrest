@@ -5,4 +5,5 @@ Rails.application.routes.draw do
   mount DeepUnrest::Engine => '/deep_unrest'
 
   jsonapi_resources :surveys
+  jsonapi_resources :applicants
 end
