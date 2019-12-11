@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    deep_unrest (0.1.52)
+    deep_unrest (0.1.53)
       jsonapi-resources (~> 0.9.10)
       rails (~> 5.2.3)
 
@@ -222,4 +222,4 @@ DEPENDENCIES
   sqlite3
 
 BUNDLED WITH
-   1.16.3
+   1.17.2
