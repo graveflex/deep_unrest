@@ -16,7 +16,6 @@ module DeepUnrest
            addr: resource_addr,
            key: k.camelize(:lower),
            uuid: uuid,
-           current_user: user,
            query: DeepUnrest.deep_underscore_keys(v) },
          *create_read_mappings(v[:include], user, [*resource_addr, :include])]
       end.flatten.compact
@@ -52,18 +51,18 @@ module DeepUnrest
       query
     end
 
-    def self.recurse_included_queries(item, mappings, parent_context, included, meta, addr)
+    def self.recurse_included_queries(ctx, item, mappings, parent_context, included, meta, addr)
       return unless item[:query].key?(:include)
 
       item[:query][:include].each do |_k, v|
         next_context = parent_context.clone
         next_context[item[:key].singularize] = item[:record]
         next_mapping = mappings.find { |m| m[:uuid] == v[:uuid] }.clone
-        execute_query(next_mapping, mappings, next_context, included, meta, addr, item)
+        execute_query(ctx, next_mapping, mappings, next_context, included, meta, addr, item)
       end
     end
 
-    def self.query_item(mapping, mappings, parent_context, included, meta, addr, _parent)
+    def self.query_item(ctx, mapping, mappings, parent_context, included, meta, addr, _parent)
       query = resolve_conditions(mapping[:query].deep_dup, parent_context)
 
       raise DeepUnrest::InvalidQuery unless query[:id] || query[:find]
@@ -88,7 +87,7 @@ module DeepUnrest
 
       included << result
 
-      recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :include])
+      recurse_included_queries(ctx, result, mappings, parent_context, included, meta, [*next_addr, :include])
     end
 
     def self.get_paginator(query, _parent)
@@ -103,7 +102,7 @@ module DeepUnrest
       end
     end
 
-    def self.query_list(item, mappings, parent_context, included, meta, addr, parent)
+    def self.query_list(ctx, item, mappings, parent_context, included, meta, addr, parent)
       base_query = item[:query].deep_dup
       extension = base_query.dig(:extend, parent&.fetch(:record)&.id&.to_s&.underscore) || {}
       query = resolve_conditions(base_query.deep_merge(extension),
@@ -120,22 +119,20 @@ module DeepUnrest
         item[:scope].merge(records_original(ctx))
       }
 
-      begin
-        # transform sort value casing for rails
-        sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
+      # transform sort value casing for rails
+      sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
 
-        processor = JSONAPI::Processor.new(resource,
-                                          :find,
-                                          filters: query[:filter] || {},
-                                          context: { current_user: item[:current_user] },
-                                          sort_criteria: sort_criteria,
-                                          paginator: paginator)
+      processor = JSONAPI::Processor.new(resource,
+                                         :find,
+                                         filters: query[:filter] || {},
+                                         context: ctx,
+                                         sort_criteria: sort_criteria,
+                                         paginator: paginator)
 
-        jsonapi_result = processor.process
-      ensure
-        # un-monkey patch the resource :records method
-        r_metaclass.send(:alias_method, :records, :records_original)
-      end
+      jsonapi_result = processor.process
+
+      # un-monkey patch the resource :records method
+      r_metaclass.send(:alias_method, :records, :records_original)
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
@@ -165,7 +162,7 @@ module DeepUnrest
         }
 
         included << result
-        recurse_included_queries(result, mappings, parent_context, included, meta, [*next_addr, :include])
+        recurse_included_queries(ctx, result, mappings, parent_context, included, meta, [*next_addr, :include])
       end
     end
 
@@ -175,17 +172,17 @@ module DeepUnrest
       :list
     end
 
-    def self.execute_query(item, mappings, parent_context, included, meta, addr, parent = nil)
+    def self.execute_query(ctx, item, mappings, parent_context, included, meta, addr, parent = nil)
       if get_query_type(item) == :list
-        query_list(item, mappings, parent_context, included, meta, addr, parent)
+        query_list(ctx, item, mappings, parent_context, included, meta, addr, parent)
       else
-        query_item(item, mappings, parent_context, included, meta, addr, parent)
+        query_item(ctx, item, mappings, parent_context, included, meta, addr, parent)
       end
     end
 
-    def self.execute_queries(mappings, parent_context = {}, included = [], meta = [], addr = [])
+    def self.execute_queries(ctx, mappings, parent_context = {}, included = [], meta = [], addr = [])
       mappings.select { |m| m[:addr].size == 1 }.each do |item|
-        item[:results] = execute_query(item, mappings, parent_context, included, meta, addr)
+        item[:results] = execute_query(ctx, item, mappings, parent_context, included, meta, addr)
       end
       [included, meta]
     end
@@ -209,7 +206,7 @@ module DeepUnrest
       DeepUnrest.collect_authorized_scopes(mappings, user)
 
       # read data
-      data, meta = execute_queries(mappings)
+      data, meta = execute_queries(ctx, mappings)
 
       # serialize using JSONAPI resource serializers
       serialize_results(ctx, data)

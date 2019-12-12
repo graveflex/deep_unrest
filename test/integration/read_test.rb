@@ -99,6 +99,32 @@ class ReadTest < ActionDispatch::IntegrationTest
     assert nicknames.include? '_ren_'
   end
 
+  test 'context is passed to resource' do
+
+    user = admins(:one)
+    Applicant.create!(name: 'Stimpson J Cat',
+                      email: 'stimp@test.com',
+                      nickname: '_stimpy_',
+                      password: 'secret123',
+                      password_confirmation: 'secret123')
+
+    params = {
+      applicants: {
+        fields: %w[name nickname]
+      }
+    }
+
+    get '/deep_unrest/read', auth_xhr_req({
+      data: params,
+      context: { allow_stimpy: true }
+    }, user, false)
+    resp = format_response
+
+    nicknames = resp[:applicants][:data].map { |a| a[:attributes][:nickname] }
+
+    assert nicknames.include? '_stimpy_'
+  end
+
   test 'nested associations are returned' do
     user = admins(:one)
     survey = surveys(:one)
