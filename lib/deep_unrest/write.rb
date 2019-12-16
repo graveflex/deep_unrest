@@ -222,13 +222,15 @@ module DeepUnrest
     end
 
     def self.map_ar_errors_to_param_keys(mappings)
-      mappings
-        .each_with_object({}) do |item, memo|
-          item[:record]&.errors&.messages&.each do |ar_path, msg|
-            err_path = format_ar_error_path(item[:addr], ar_path.to_s)
-            DeepUnrest.set_attr(memo, err_path, msg)
+      DeepUnrest.deep_camelize_keys(
+        mappings
+          .each_with_object({}) do |item, memo|
+            item[:record]&.errors&.messages&.each do |ar_path, msg|
+              err_path = format_ar_error_path(item[:addr], ar_path.to_s)
+              DeepUnrest.set_attr(memo, err_path, msg)
+            end
           end
-        end
+      )
     end
 
     def self.write(ctx, params, user)
