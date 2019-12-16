@@ -49,7 +49,7 @@ module DeepUnrest
     end
 
     def write
-      repaired_params = params[:data]
+      repaired_params = repair_nested_params(params[:data])
       data = repaired_params[:data]
       context = repaired_params[:context] || {}
       context[:uuid] = request.uuid

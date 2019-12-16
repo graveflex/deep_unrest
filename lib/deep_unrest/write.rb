@@ -2,7 +2,8 @@
 
 module DeepUnrest
   module Write
-    def self.get_scope_type(item)
+    def self.get_scope_type(item, path)
+      return :index if DeepUnrest.plural?(path)
       return :destroy if item[:destroy]
       return :show if item[:readOnly] || item[:attributes].blank?
       return :create if item[:id] && DeepUnrest.temp_id?(item[:id].to_s)
@@ -19,7 +20,7 @@ module DeepUnrest
       [{ klass: k.singularize.classify.constantize,
          policy: "#{k.singularize.classify}Policy".constantize,
          resource: "#{k.singularize.classify}Resource".constantize,
-         scope_type: get_scope_type(v),
+         scope_type: get_scope_type(v, path),
          addr: resource_addr,
          key: k.camelize(:lower),
          uuid: uuid,
@@ -98,12 +99,16 @@ module DeepUnrest
     def self.build_mutation_bodies(mappings)
       mappings.each_with_object({}) do |item, memo|
         # TODO: use pkey instead of "id"
+        id = item.dig(:query, :id)
+        next if id.blank?
+
         next_attrs = (item.dig(:query, :attributes) || {})
                      .deep_symbolize_keys
-        update_body = { id: item.dig(:query, :id),
+        update_body = { id: id,
                         deep_unrest_query_uuid: item.dig(:query, :uuid),
                         **DeepUnrest.deep_underscore_keys(next_attrs) }
-        update_body[:_destroy] = true if item[:scope_type] == :destroy
+
+        update_body[:_destroy] = true if item.dig(:query, :destroy)
         DeepUnrest.set_attr(memo, item[:ar_addr].clone, update_body)
         if item[:ar_addr].size == 1
           item[:mutate] = memo.fetch(*item[:ar_addr])
@@ -136,6 +141,7 @@ module DeepUnrest
                        end
                      end
                    when :destroy
+                     id = item.dig(:query, :id)
                      model = item[:klass].find(id)
                      resource = item[:resource].new(model, context)
                      resource.run_callbacks :remove do
@@ -282,3 +288,4 @@ module DeepUnrest
     end
   end
 end
+
