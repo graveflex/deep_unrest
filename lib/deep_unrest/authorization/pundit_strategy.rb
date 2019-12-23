@@ -36,6 +36,8 @@ module DeepUnrest
           target = scope[:scope][:base].send(scope[:scope][:method],
                                              *scope[:scope][:arguments])
         else
+          return true unless scope[:query][:id]
+
           target = scope[:klass].find(scope[:query][:id])
         end
 
