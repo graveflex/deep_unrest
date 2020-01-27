@@ -216,7 +216,7 @@ module DeepUnrest
   end
 
   def self.parse_id(id_str)
-    return unless id_str.is_a? String
+    return unless id_str.is_a?(String) || id_str.is_a?(Integer)
     return false if id_str.nil?
     return id_str if id_str.is_a? Integer
 
