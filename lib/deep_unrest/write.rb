@@ -3,7 +3,6 @@
 module DeepUnrest
   module Write
     def self.get_scope_type(item, path)
-      return :index if DeepUnrest.plural?(path)
       return :destroy if item[:destroy]
       return :show if item[:readOnly] || item[:attributes].blank?
       return :create if item[:id] && DeepUnrest.temp_id?(item[:id].to_s)
