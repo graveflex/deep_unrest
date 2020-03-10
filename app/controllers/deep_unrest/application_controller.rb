@@ -51,6 +51,7 @@ module DeepUnrest
     def write
       repaired_params = repair_nested_params(params[:data])
       data = repaired_params[:data]
+      data = ActionController::Parameters.new({}) if data&.blank?
       context = repaired_params[:context] || {}
       context[:uuid] = request.uuid
       context[:current_user] = current_user
