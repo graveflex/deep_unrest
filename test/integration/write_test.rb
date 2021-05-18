@@ -28,7 +28,7 @@ class WriteTest < ActionDispatch::IntegrationTest
       }
     }
 
-    patch '/deep_unrest/write', auth_xhr_req(body, user)
+    patch '/deep_unrest/write', **auth_xhr_req(body, user)
 
     resp = format_response
 
@@ -62,7 +62,7 @@ class WriteTest < ActionDispatch::IntegrationTest
       }
     }
 
-    patch '/deep_unrest/write', auth_xhr_req(body, user)
+    patch '/deep_unrest/write', **auth_xhr_req(body, user)
 
     assert_response 405
     resp = format_response
@@ -140,7 +140,7 @@ class WriteTest < ActionDispatch::IntegrationTest
       }
     }
 
-    patch '/deep_unrest/write', auth_xhr_req(body, user)
+    patch '/deep_unrest/write', **auth_xhr_req(body, user)
     resp = format_response
 
     new_answer = Answer.last
@@ -252,7 +252,7 @@ class WriteTest < ActionDispatch::IntegrationTest
       }
     }
 
-    patch '/deep_unrest/write', auth_xhr_req(body, user)
+    patch '/deep_unrest/write', **auth_xhr_req(body, user)
     resp = format_response
 
     assert_equal resp[:errors],

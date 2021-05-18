@@ -29,7 +29,7 @@ class ReadTest < ActionDispatch::IntegrationTest
       }
     }
 
-    get '/deep_unrest/read', auth_xhr_req({ data: params }, user, false)
+    get '/deep_unrest/read', **auth_xhr_req({ data: params }, user, false)
     resp = format_response
 
     assert_equal resp.dig(:survey, :id), survey.id.to_s
@@ -49,7 +49,7 @@ class ReadTest < ActionDispatch::IntegrationTest
     }
 
     assert_raises Pundit::NotAuthorizedError do
-      get '/deep_unrest/read', auth_xhr_req({ data: params }, user, false)
+      get '/deep_unrest/read', **auth_xhr_req({ data: params }, user, false)
     end
   end
 
@@ -63,7 +63,7 @@ class ReadTest < ActionDispatch::IntegrationTest
     }
 
     assert_raises Pundit::NotAuthorizedError do
-      get '/deep_unrest/read', auth_xhr_req({ data: params,
+      get '/deep_unrest/read', **auth_xhr_req({ data: params,
                                               context: { block_me: true } },
                                             user,
                                             false)
@@ -90,7 +90,7 @@ class ReadTest < ActionDispatch::IntegrationTest
       }
     }
 
-    get '/deep_unrest/read', auth_xhr_req({ data: params }, user, false)
+    get '/deep_unrest/read', **auth_xhr_req({ data: params }, user, false)
     resp = format_response
 
     nicknames = resp[:applicants][:data].map { |a| a[:attributes][:nickname] }
@@ -114,7 +114,7 @@ class ReadTest < ActionDispatch::IntegrationTest
       }
     }
 
-    get '/deep_unrest/read', auth_xhr_req({
+    get '/deep_unrest/read', **auth_xhr_req({
       data: params,
       context: { allow_stimpy: true }
     }, user, false)
@@ -187,7 +187,7 @@ class ReadTest < ActionDispatch::IntegrationTest
       }
     }
 
-    get '/deep_unrest/read', auth_xhr_req({ data: params }, user, false)
+    get '/deep_unrest/read', **auth_xhr_req({ data: params }, user, false)
     resp = format_response
 
     assert_equal(survey.id, resp[:survey][:id].to_i)

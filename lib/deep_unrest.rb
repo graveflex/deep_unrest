@@ -162,7 +162,7 @@ module DeepUnrest
   def self.parse_attributes(type, scope_type, attributes, user)
     p = JSONAPI::RequestParser.new
     resource = get_resource(type)
-    p.resource_klass = resource
+    p.source_klass = resource
     ctx = { current_user: user }
     opts = if scope_type == :create
              resource.creatable_fields(ctx)
@@ -170,7 +170,7 @@ module DeepUnrest
              resource.updatable_fields(ctx)
            end
 
-    p.parse_params({ attributes: attributes }, opts)[:attributes]
+    p.parse_params(resource, { attributes: attributes }, opts)[:attributes]
   rescue JSONAPI::Exceptions::ParameterNotAllowed
     unpermitted_keys = attributes.keys.map(&:to_sym) - opts
     msg = "Attributes #{unpermitted_keys} of #{type.classify} not allowed"
@@ -558,6 +558,19 @@ module DeepUnrest
     DeepUnrest::Write.write(ctx, params, user)
   end
 
+  def self.serialize_resource(resource_klass, fields, id)
+    resource_identity = JSONAPI::ResourceIdentity.new(resource_klass, id)
+    id_tree = JSONAPI::PrimaryResourceIdTree.new
+    id_tree.add_resource_fragment(JSONAPI::ResourceFragment.new(resource_identity), {})
+    resource_set = JSONAPI::ResourceSet.new(id_tree)
+    serializer = JSONAPI::ResourceSerializer.new(
+        resource_klass,
+        fields: fields
+    )
+    resource_set.populate!(serializer, {}, {})
+    serializer.serialize_resource_set_to_hash_single(resource_set)['data'].except('links')
+  end
+
   def self.serialize_changes(diffs, user)
     ctx = { current_user: user }
     diffs.each do |diff|
@@ -582,10 +595,7 @@ module DeepUnrest
       keys = diff[:resource].keys.map(&:to_sym)
       fields[to_assoc(diff[:klass].to_s.pluralize)] = keys
 
-      JSONAPI::ResourceSerializer.new(
-        resource_klass,
-        fields: fields
-      ).serialize_to_hash(resource_klass.new(diff[:model], ctx))[:data]
+      serialize_resource(resource_klass, fields, diff[:model].id)
     end
     resources.select { |item| item.dig('attributes') }.compact
   end
@@ -692,10 +702,10 @@ module DeepUnrest
   def self.serialize_result(ctx, item)
     resource = item[:resource]
     resource_instance = resource.new(item[:record], ctx)
-    fields = item[:query][:fields].map(&:underscore).map(&:to_sym)
-    JSONAPI::ResourceSerializer.new(
-      resource,
-      fields: { "#{item[:key].underscore.pluralize}": fields }
-    ).serialize_to_hash(resource_instance)[:data]
+    fields = {}
+    keys = item[:query][:fields].map(&:underscore).map(&:to_sym)
+    fields[to_assoc(item[:key].pluralize)] = keys
+
+    serialize_resource(resource, fields, item[:record].id).except(:links)
   end
 end

@@ -102,6 +102,11 @@ module DeepUnrest
       end
     end
 
+    def self.format_processor_results(resource_klass, processor_result)
+      results = processor_result.resource_set.resource_klasses[resource_klass]
+      results.values.map {|r| r[:resource] }
+    end
+
     def self.query_list(ctx, item, mappings, parent_context, included, meta, addr, parent)
       base_query = item[:query].deep_dup
       extension = base_query.dig(:extend, parent&.fetch(:record)&.id&.to_s&.underscore) || {}
@@ -122,14 +127,19 @@ module DeepUnrest
       # transform sort value casing for rails
       sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
 
+      serializer = JSONAPI::ResourceSerializer.new(resource)
+
       processor = JSONAPI::Processor.new(resource,
                                          :find,
                                          filters: query[:filter] || {},
                                          context: ctx,
                                          sort_criteria: sort_criteria,
+                                         serializer: serializer,
                                          paginator: paginator)
 
       jsonapi_result = processor.process
+
+      resource_results = format_processor_results(resource, jsonapi_result)
 
       # un-monkey patch the resource :records method
       r_metaclass.send(:alias_method, :records, :records_original)
@@ -146,14 +156,14 @@ module DeepUnrest
       }
 
       # make sure to return empty array if no results are found for this node
-      if jsonapi_result.resources.empty?
+      if resource_results.empty?
         meta << {
           addr: [*addr, item[:key], 'data'],
           serialized_result: []
         }
       end
 
-      jsonapi_result.resources.each_with_index do |record, i|
+      resource_results.each_with_index do |record, i|
         next_addr = [*addr, item[:key], 'data[]', i]
         result = {
           **item,

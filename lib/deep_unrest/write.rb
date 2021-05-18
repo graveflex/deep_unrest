@@ -73,14 +73,14 @@ module DeepUnrest
         attributes = item.dig(:query, :attributes) || {}
         resource = item[:resource]
         p = JSONAPI::RequestParser.new
-        p.resource_klass = resource
+        p.source_klass = resource
         opts = if item[:scope_type] == :create
                  resource.creatable_fields(ctx)
                else
                  resource.updatable_fields(ctx)
                end
 
-        p.parse_params({ attributes: attributes }, opts)[:attributes]
+        p.parse_params(resource, { attributes: attributes }, opts)[:attributes]
       rescue JSONAPI::Exceptions::ParameterNotAllowed
         unpermitted_keys = attributes.keys.map(&:to_sym) - opts
         item[:errors] = unpermitted_keys.each_with_object({}) do |attr_key, memo|
