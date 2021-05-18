@@ -2,8 +2,8 @@
 
 one:
   survey: one
-  content: "<%=j Faker::TwinPeaks.location %>"
+  content: "<%=j Faker::TvShows::TwinPeaks.location %>"
 
 two:
   survey: one
-  content: "<%=j Faker::TwinPeaks.location %>"
+  content: "<%=j Faker::TvShows::TwinPeaks.location %>"

@@ -56,7 +56,7 @@ class WriteTest < ActionDispatch::IntegrationTest
           type: 'surveys',
           attributes: {
             approved: true,
-            name: Faker::TwinPeaks.location
+            name: Faker::TvShows::TwinPeaks.location
           }
         }
       }
@@ -86,8 +86,8 @@ class WriteTest < ActionDispatch::IntegrationTest
     q2 = questions(:two)
     a1 = answers(:one)
     a2 = answers(:two)
-    a1_val = Faker::TwinPeaks.quote
-    new_a_val = Faker::TwinPeaks.quote
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    new_a_val = Faker::TvShows::TwinPeaks.quote
 
     body = {
       data: {
@@ -196,8 +196,8 @@ class WriteTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
     q1_path = "questions.#{q1.id}"
-    a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
-    a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a1_val = "XXXXX#{Faker::TvShows::TwinPeaks.quote}"
+    a2_val = "XXXXX#{Faker::TvShows::TwinPeaks.quote}"
 
     body = {
       data: {
@@ -227,7 +227,7 @@ class WriteTest < ActionDispatch::IntegrationTest
                           id: '[2]',
                           attributes: {
                             surveyId: survey.id,
-                            value: Faker::TwinPeaks.quote,
+                            value: Faker::TvShows::TwinPeaks.quote,
                             applicantId: user.id,
                             questionId: q1.id
                           }

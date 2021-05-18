@@ -253,7 +253,7 @@ module DeepUnrest
         user = applicants(:one)
         path = 'surveys.1.questions.2.answers[3].attachments[4]'
         action = :update
-        value = Faker::TwinPeaks.quote
+        value = Faker::TvShows::TwinPeaks.quote
         params = [{ path: path,
                     attributes: { title: value },
                     action: action }]
@@ -303,9 +303,9 @@ module DeepUnrest
         user = admins(:one)
         path = 'surveys.1.questions.2'
         action = :update
-        content = Faker::TwinPeaks.quote
-        options = [[Faker::TwinPeaks.location,
-                    Faker::TwinPeaks.location]]
+        content = Faker::TvShows::TwinPeaks.quote
+        options = [[Faker::TvShows::TwinPeaks.location,
+                    Faker::TvShows::TwinPeaks.location]]
         params = [{ path: path,
                     attributes: { content: content,
                                   options: options },
@@ -403,9 +403,9 @@ module DeepUnrest
         a1_path = "answers.#{a1.id}"
         a2 = answers(:two)
         a2_path = "answers.#{a2.id}"
-        survey_name = Faker::TwinPeaks.location
-        a1_val = Faker::TwinPeaks.quote
-        new_a_val = Faker::TwinPeaks.quote
+        survey_name = Faker::TvShows::TwinPeaks.location
+        a1_val = Faker::TvShows::TwinPeaks.quote
+        new_a_val = Faker::TvShows::TwinPeaks.quote
 
         # let's go crazy
         params = [{ path: survey_path,

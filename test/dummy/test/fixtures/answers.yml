@@ -2,19 +2,19 @@
 
 one:
   applicant: one
-  value: "<%=j Faker::TwinPeaks.character %>"
+  value: "<%=j Faker::TvShows::TwinPeaks.character %>"
   question: one
   survey: one
 
 two:
   applicant: one
-  value: "<%=j Faker::TwinPeaks.character %>"
+  value: "<%=j Faker::TvShows::TwinPeaks.character %>"
   question: two
   survey: one
 
 
 three:
   applicant: two
-  value: "<%=j Faker::TwinPeaks.character %>"
+  value: "<%=j Faker::TvShows::TwinPeaks.character %>"
   question: one
   survey: two

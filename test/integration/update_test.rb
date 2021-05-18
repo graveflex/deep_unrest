@@ -22,9 +22,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_path = "answers.#{a1.id}"
     a2 = answers(:two)
     a2_path = "answers.#{a2.id}"
-    survey_name = Faker::TwinPeaks.location
-    a1_val = Faker::TwinPeaks.quote
-    new_a_val = Faker::TwinPeaks.quote
+    survey_name = Faker::TvShows::TwinPeaks.location
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    new_a_val = Faker::TvShows::TwinPeaks.quote
 
     body = [{ path: survey_path,
               attributes: { name: survey_name } },
@@ -53,7 +53,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
 
     body = [{ path: survey_path,
-              attributes: { name: Faker::TwinPeaks.quote } }]
+              attributes: { name: Faker::TvShows::TwinPeaks.quote } }]
 
     assert_raises Pundit::NotAuthorizedError do
       patch '/deep_unrest/update', auth_xhr_req({ data: body }, user)
@@ -66,7 +66,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
 
     body = [{ path: survey_path,
-              attributes: { name: Faker::TwinPeaks.quote } }]
+              attributes: { name: Faker::TvShows::TwinPeaks.quote } }]
 
     assert_raises Pundit::NotAuthorizedError do
       patch '/deep_unrest/update',
@@ -88,9 +88,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_path = "answers.#{a1.id}"
     a2 = answers(:two)
     a2_path = "answers.#{a2.id}"
-    survey_name = Faker::TwinPeaks.location
-    a1_val = Faker::TwinPeaks.quote
-    new_a_val = Faker::TwinPeaks.quote
+    survey_name = Faker::TvShows::TwinPeaks.location
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    new_a_val = Faker::TvShows::TwinPeaks.quote
 
     body = [{ path: survey_path,
               attributes: { name: survey_name } },
@@ -112,7 +112,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
     user = applicants(:one)
     survey = surveys(:one)
     survey_path = "surveys.#{survey.id}"
-    survey_name = Faker::TwinPeaks.location
+    survey_name = Faker::TvShows::TwinPeaks.location
 
     SurveyResource.any_instance.expects(:track_save).once
     SurveyResource.any_instance.expects(:track_update).once
@@ -128,7 +128,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
   test 'jsonapi resource callbacks are called on create' do
     user = applicants(:one)
     survey_path = 'surveys[123]'
-    survey_name = Faker::TwinPeaks.location
+    survey_name = Faker::TvShows::TwinPeaks.location
 
     SurveyResource.any_instance.expects(:track_save).once
     SurveyResource.any_instance.expects(:track_update).never
@@ -169,9 +169,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     q1_path = "questions.#{q1.id}"
     q2 = questions(:two)
     q2_path = "questions.#{q2.id}"
-    a1_val = Faker::TwinPeaks.quote
-    a2_val = Faker::TwinPeaks.quote
-    a3_val = Faker::TwinPeaks.quote
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    a2_val = Faker::TvShows::TwinPeaks.quote
+    a3_val = Faker::TvShows::TwinPeaks.quote
 
     survey_path = "surveys.#{survey.id}"
 
@@ -279,7 +279,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
 
     body = [{ path: survey_path,
-              attributes: { name: Faker::TwinPeaks.location,
+              attributes: { name: Faker::TvShows::TwinPeaks.location,
                             approved: true } }]
 
     patch '/deep_unrest/update', auth_xhr_req({ data: body },
@@ -297,7 +297,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
     user = applicants(:one)
     survey1 = surveys(:one)
     survey2 = surveys(:two)
-    name = Faker::TwinPeaks.location
+    name = Faker::TvShows::TwinPeaks.location
 
     body = [{ path: 'surveys.*',
               attributes: { name: name } }]
@@ -324,8 +324,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_path = "answers.#{a1.id}"
     a2 = answers(:two)
     a2_path = "answers.#{a2.id}"
-    a1_val = Faker::TwinPeaks.quote
-    new_a_val = Faker::TwinPeaks.quote
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    new_a_val = Faker::TvShows::TwinPeaks.quote
 
     body = [{ path: "#{survey_path}.#{q1_path}.#{a1_path}",
               attributes: { value: a1_val } },
@@ -372,9 +372,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_path = "answers.#{a1.id}"
     a2 = answers(:two)
     a2_path = "answers.#{a2.id}"
-    a1_val = Faker::TwinPeaks.quote
-    new_a_val = Faker::TwinPeaks.quote
-    q1_val = Faker::TwinPeaks.quote
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    new_a_val = Faker::TvShows::TwinPeaks.quote
+    q1_val = Faker::TvShows::TwinPeaks.quote
 
     body = [{ path: "#{survey_path}.#{q1_path}.#{a1_path}",
               attributes: { value: a1_val } },
@@ -399,8 +399,8 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
     q1_path = "questions.#{q1.id}"
-    a1_val = "XXXXX#{Faker::TwinPeaks.quote}"
-    a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a1_val = "XXXXX#{Faker::TvShows::TwinPeaks.quote}"
+    a2_val = "XXXXX#{Faker::TvShows::TwinPeaks.quote}"
 
     body = [{ path: survey_path,
               attributes: { name: nil } },
@@ -411,7 +411,7 @@ class UpdateTest < ActionDispatch::IntegrationTest
                             questionId: q1.id } },
             { path: "#{survey_path}.#{q1_path}.answers[2]",
               attributes: { surveyId: survey.id,
-                            value: Faker::TwinPeaks.quote,
+                            value: Faker::TvShows::TwinPeaks.quote,
                             applicantId: user.id,
                             questionId: q1.id } },
             { path: "#{survey_path}.#{q1_path}.answers[3]",
@@ -471,11 +471,11 @@ class UpdateTest < ActionDispatch::IntegrationTest
     q1_path = "questions.#{q1.id}"
     q2 = questions(:two)
     q2_path = "questions.#{q2.id}"
-    a0_val = Faker::TwinPeaks.quote
-    a1_val = Faker::TwinPeaks.quote
-    a2_val = "XXXXX#{Faker::TwinPeaks.quote}"
-    a3_val = Faker::TwinPeaks.quote
-    a4_val = "XXXXX#{Faker::TwinPeaks.quote}"
+    a0_val = Faker::TvShows::TwinPeaks.quote
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    a2_val = "XXXXX#{Faker::TvShows::TwinPeaks.quote}"
+    a3_val = Faker::TvShows::TwinPeaks.quote
+    a4_val = "XXXXX#{Faker::TvShows::TwinPeaks.quote}"
     survey_error_path = Faker::Lorem.word
     answer_0_error_path = 'answer_0_error_path'
     answer_1_error_path = 'answer_1_error_path'
@@ -555,11 +555,11 @@ class UpdateTest < ActionDispatch::IntegrationTest
     survey_path = "surveys.#{survey.id}"
     q1 = questions(:one)
     q1_path = "questions.#{q1.id}"
-    a1_val = Faker::TwinPeaks.quote
-    a2_val = Faker::TwinPeaks.quote
-    att1_uid = Faker::Pokemon.name
-    att2_uid = Faker::Pokemon.name
-    att3_uid = Faker::Pokemon.name
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    a2_val = Faker::TvShows::TwinPeaks.quote
+    att1_uid = Faker::Games::Pokemon.name
+    att2_uid = Faker::Games::Pokemon.name
+    att3_uid = Faker::Games::Pokemon.name
 
     body = [{ path: "#{survey_path}.#{q1_path}.answers[a1]",
               attributes: { value: a1_val,
@@ -666,9 +666,9 @@ class UpdateTest < ActionDispatch::IntegrationTest
     a1_path = "answers.#{a1.id}"
     a2 = answers(:two)
     a2_path = "answers.#{a2.id}"
-    survey_name = Faker::TwinPeaks.location
-    a1_val = Faker::TwinPeaks.quote
-    new_a_val = Faker::TwinPeaks.quote
+    survey_name = Faker::TvShows::TwinPeaks.location
+    a1_val = Faker::TvShows::TwinPeaks.quote
+    new_a_val = Faker::TvShows::TwinPeaks.quote
 
     body = [{ path: survey_path,
               attributes: { name: survey_name } },
