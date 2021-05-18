@@ -13,8 +13,8 @@ gemspec
 # your gem to rubygems.org.
 
 group :development, :test do
-  gem 'devise_token_auth', '~> 0.2.0'
-  gem 'jsonapi-resources', '~> 0.9.10'
+  gem 'devise_token_auth', github: 'lynndylanhurley/devise_token_auth'
+  gem 'jsonapi-resources', '~> 0.10'
   gem 'pry-rails'
   gem 'rubocop', '0.48.1', require: false
 end
@@ -22,10 +22,10 @@ end
 group :test do
   gem 'codeclimate-test-reporter', require: nil
   gem 'database_cleaner', '1.6.0'
-  gem 'dragonfly', '1.1.2'
-  gem 'faker', '1.7.3'
+  gem 'dragonfly', '1.3.0'
+  gem 'faker', '2.18.0'
   gem 'mocha', '1.3.0'
-  gem 'omniauth-github', '1.2.3'
-  gem 'pundit', '1.1.0'
+  gem 'omniauth-github', '2.0.0'
+  gem 'pundit', '2.1.0'
   gem 'sqlite3'
 end

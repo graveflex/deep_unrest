@@ -21,13 +21,13 @@ Gem::Specification.new do |s|
                 'Rakefile',
                 'README.md']
 
-  s.add_dependency 'rails', '~> 5.2.3'
-  s.add_dependency 'jsonapi-resources', '~> 0.9.10'
+  s.add_dependency 'rails', '~> 6.1.3'
+  s.add_dependency 'jsonapi-resources', '~> 0.10'
 
   s.add_development_dependency 'sqlite3'
-  s.add_development_dependency 'omniauth-github', '1.2.3'
-  s.add_development_dependency 'pundit', '1.1.0'
-  s.add_development_dependency 'dragonfly', '1.1.2'
+  s.add_development_dependency 'omniauth-github', '2.0.0'
+  s.add_development_dependency 'pundit', '2.1.0'
+  s.add_development_dependency 'dragonfly', '1.3.0'
   s.add_development_dependency 'database_cleaner', '1.6.0'
-  s.add_development_dependency 'faker', '1.7.3'
+  s.add_development_dependency 'faker', '2.18.0'
 end
