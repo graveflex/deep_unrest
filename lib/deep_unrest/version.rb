@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module DeepUnrest
-  VERSION = '0.1.69'
+  VERSION = '0.1.70'
 end
