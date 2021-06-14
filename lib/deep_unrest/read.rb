@@ -103,7 +103,7 @@ module DeepUnrest
     end
 
     def self.format_processor_results(resource_klass, processor_result)
-      results = processor_result.resource_set.resource_klasses[resource_klass]
+      results = processor_result.resource_set.resource_klasses[resource_klass] || {}
       results.values.map {|r| r[:resource] }
     end
 
