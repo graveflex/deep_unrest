@@ -17,12 +17,19 @@ module DeepUnrest
       end
 
       def self.auth_error_message(user, scope)
-        actor = "#{user.class.name} with id '#{user.id}'"
-        target = scope[:type].classify
-        unless %i[create update_all].include? scope[:scope_type]
-          target += " with id '#{scope[:scope][:arguments].first}'"
+        if user
+          actor = "#{user.class.name} with id '#{user.id}' is"
+        else
+          actor = "Anonymous users are"
         end
-        msg = "#{actor} is not authorized to #{scope[:scope_type]} #{target}"
+
+        target = (scope[:type] || scope[:key]).to_s.classify
+        unless %i[create update_all].include? scope[:scope_type]
+          target_id = (scope[:id] || scope.dig(:query, :id)).to_s.gsub('.', '')
+          target += " with id '#{target_id.to_s.gsub('.', '')}'"
+        end
+
+        msg = "#{actor} not authorized to #{scope[:scope_type].to_s.downcase} #{target}"
 
         [{ title: msg,
            source: { pointer: scope[:path] } }].to_json
