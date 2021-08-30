@@ -82,7 +82,7 @@ module DeepUnrest
 
         p.parse_params(resource, { attributes: attributes }, opts)[:attributes]
       rescue JSONAPI::Exceptions::ParameterNotAllowed
-        unpermitted_keys = attributes.keys.map(&:to_sym) - opts
+        unpermitted_keys = attributes.keys.map(&:underscore).map(&:to_sym) - opts
         item[:errors] = unpermitted_keys.each_with_object({}) do |attr_key, memo|
           memo[attr_key] = 'Unpermitted parameter'
         end
