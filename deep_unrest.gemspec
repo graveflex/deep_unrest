@@ -27,7 +27,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'sqlite3'
   s.add_development_dependency 'omniauth-github', '2.0.0'
   s.add_development_dependency 'pundit', '2.1.0'
-  s.add_development_dependency 'dragonfly', '1.3.0'
+  s.add_development_dependency 'dragonfly', '1.4.0'
   s.add_development_dependency 'database_cleaner', '1.6.0'
   s.add_development_dependency 'faker', '2.18.0'
 end
