@@ -116,27 +116,14 @@ module DeepUnrest
       paginator = get_paginator(query, parent)
       resource = item[:resource]
 
-      r_metaclass = class << resource; self; end
-      if r_metaclass.method_defined? :records
-        r_metaclass.class_eval do
-          alias_method :records_original, :records
-        end
-      end
-
-      # TODO: find a way to do this that doesn't blow out the original :records method
-      resource.define_singleton_method(:records) { |ctx|
-        full_scope = if self.respond_to? :records_original
-          records_original(ctx)
-        else
-          super(ctx)
-        end
-
-        item[:scope].merge(full_scope)
-      }
+      # monkey patch the resource to only show authorized records
+      old_records = resource.method(:records)
+      resource.define_singleton_method(:records) { |ctx| item[:scope].merge(old_records.call(ctx)) }
 
       # transform sort value casing for rails
       sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
       serializer = JSONAPI::ResourceSerializer.new(resource)
+
       processor = JSONAPI::Processor.new(resource,
                                          :find,
                                          filters: query[:filter] || {},
@@ -146,7 +133,11 @@ module DeepUnrest
                                          paginator: paginator)
 
       jsonapi_result = processor.process
+
       resource_results = format_processor_results(resource, jsonapi_result)
+
+      # un-monkey patch the resource :records method
+      resource.define_singleton_method(:records) { |ctx| old_records.call(ctx) }
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
@@ -177,15 +168,6 @@ module DeepUnrest
 
         included << result
         recurse_included_queries(ctx, result, mappings, parent_context, included, meta, [*next_addr, :include])
-      end
-    ensure
-      # un-monkey patch the resource :records method
-      if r_metaclass.method_defined? :records_original
-        r_metaclass.class_eval do
-          alias_method :records, :records_original
-        end
-      else
-        r_metaclass.undef_method :records
       end
     end
 
