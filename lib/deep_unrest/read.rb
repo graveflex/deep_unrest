@@ -137,7 +137,7 @@ module DeepUnrest
       resource_results = format_processor_results(resource, jsonapi_result)
 
       # un-monkey patch the resource :records method
-      resource.define_singleton_method(:records) { |ctx| old_records.call(ctx) }
+      resource.define_singleton_method(:records, old_records)
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
@@ -169,6 +169,9 @@ module DeepUnrest
         included << result
         recurse_included_queries(ctx, result, mappings, parent_context, included, meta, [*next_addr, :include])
       end
+    rescue StandardError => e
+      # un-monkey patch the resource :records method
+      resource.define_singleton_method(:records, old_records)
     end
 
     def self.get_query_type(item)
