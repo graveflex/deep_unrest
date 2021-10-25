@@ -110,7 +110,7 @@ module DeepUnrest
         update_body[:_destroy] = true if item.dig(:query, :destroy)
         DeepUnrest.set_attr(memo, item[:ar_addr].clone, update_body)
         if item[:ar_addr].size == 1
-          item[:mutate] = memo.fetch(*item[:ar_addr])
+          item[:mutate] = update_body
           item[:scope_type] = :update if item[:scope_type] == :show
         end
       end
@@ -142,9 +142,10 @@ module DeepUnrest
                    when :destroy
                      id = item.dig(:query, :id)
                      model = item[:klass].find(id)
+                     model.deep_unrest_query_uuid = item.dig(:query, :uuid)
                      resource = item[:resource].new(model, context)
                      resource.run_callbacks :remove do
-                       item[:klass].destroy(id)
+                       model.destroy!
                      end
                    end
 
