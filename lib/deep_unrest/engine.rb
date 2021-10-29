@@ -4,6 +4,7 @@ require 'deep_unrest/authorization/pundit_strategy'
 require 'deep_unrest/paginators/basic'
 require 'deep_unrest/concerns/null_concern'
 require 'deep_unrest/concerns/map_temp_ids'
+require 'deep_unrest/concerns/resource_scope'
 
 module DeepUnrest
   class Engine < ::Rails::Engine

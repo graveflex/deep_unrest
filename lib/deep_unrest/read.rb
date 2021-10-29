@@ -116,9 +116,7 @@ module DeepUnrest
       paginator = get_paginator(query, parent)
       resource = item[:resource]
 
-      # monkey patch the resource to only show authorized records
-      old_records = resource.method(:records)
-      resource.define_singleton_method(:records) { |ctx| item[:scope].merge(old_records.call(ctx)) }
+      resource_scope = item[:scope]
 
       # transform sort value casing for rails
       sort_criteria = query[:sort]&.map { |s| s.clone.merge(field: s[:field].underscore) }
@@ -127,7 +125,7 @@ module DeepUnrest
       processor = JSONAPI::Processor.new(resource,
                                          :find,
                                          filters: query[:filter] || {},
-                                         context: ctx,
+                                         context: ctx.clone.merge(scope: resource_scope),
                                          sort_criteria: sort_criteria,
                                          serializer: serializer,
                                          paginator: paginator)
@@ -135,9 +133,6 @@ module DeepUnrest
       jsonapi_result = processor.process
 
       resource_results = format_processor_results(resource, jsonapi_result)
-
-      # un-monkey patch the resource :records method
-      resource.define_singleton_method(:records, old_records)
 
       meta << {
         addr: [*addr, item[:key], 'meta'],
@@ -169,9 +164,6 @@ module DeepUnrest
         included << result
         recurse_included_queries(ctx, result, mappings, parent_context, included, meta, [*next_addr, :include])
       end
-    rescue StandardError => e
-      # un-monkey patch the resource :records method
-      resource.define_singleton_method(:records, old_records)
     end
 
     def self.get_query_type(item)
@@ -224,3 +216,4 @@ module DeepUnrest
     end
   end
 end
+
