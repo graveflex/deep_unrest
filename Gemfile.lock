@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    deep_unrest (0.1.75)
+    deep_unrest (0.1.76)
       jsonapi-resources (~> 0.10)
       rails (~> 6.1.3)
 
