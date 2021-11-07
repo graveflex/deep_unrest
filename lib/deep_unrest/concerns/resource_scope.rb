@@ -3,9 +3,9 @@ module DeepUnrest
     module ResourceScope
       extend ActiveSupport::Concern
 
-      included do
+      class_methods do
         def records_base(opts)
-          opts[:scope] || super(opts)
+          opts&.dig(:context, :scope) || super(opts)
         end
       end
     end
