@@ -22,7 +22,7 @@ end
 group :test do
   gem 'codeclimate-test-reporter', require: nil
   gem 'database_cleaner', '1.6.0'
-  gem 'dragonfly', '1.3.0'
+  gem 'dragonfly', '1.4.0'
   gem 'faker', '2.18.0'
   gem 'mocha', '1.3.0'
   gem 'omniauth-github', '2.0.0'
